@@ -1,0 +1,4 @@
+Initial resources declaration wastes in total 96835160 MB, on average 1063 MB
+Using virtual memory wastes in total 163983127 MB, on average 1800 MB
+Slow increase wastes in total 112586230.0 MB, on average 1236.12461572 MB
+91080

@@ -11,4 +11,5 @@ colmena_get_plots: colmena_get_resources
 
 clean:
 	rm resources_analysis/colmena/plots/*
-	rm resources_analysis/colmena/results/*	
+	rm resources_analysis/colmena/results/*
+	rm resources_analysis/colmena/resources_all.txt	

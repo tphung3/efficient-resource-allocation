@@ -24,7 +24,8 @@ with open(resources_log, "r") as f:
 		print("task " + task_id + " processed successfully!") 
 
 #write to file the formatted summary of consumption
-with open("resources_all.txt", "w") as f:
+colmena_dir = 'resources_analysis/colmena/'
+with open(colmena_dir+"resources_all.txt", "w") as f:
 	for resource in resources_all:
 		try:
 			line = resource[0]+" -- "+resource[1]+" -- "+resource[2]+" -- "+resource[3]+" -- "+resource[4] + " -- "+resource[5]+" -- "+resource[6]

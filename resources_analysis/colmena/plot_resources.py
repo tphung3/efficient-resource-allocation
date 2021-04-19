@@ -124,7 +124,7 @@ task_id_list = []
 plots_dir = "resources_analysis/colmena/plots/"
 
 #read in data
-with open("resources_all.txt", "r") as f:
+with open("resources_analysis/colmena/resources_all.txt", "r") as f:
 	Lines = f.readlines()
 	for line in Lines[1:]:
 		resource = line.split(" -- ")

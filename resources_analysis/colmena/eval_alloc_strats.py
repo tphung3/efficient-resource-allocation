@@ -25,7 +25,7 @@ mach_capa = [16, 128000, 128000]
 def_res = [4, 40000, 10]
 
 #input file of resources_consumption
-res_file = "resources_all.txt"
+res_file = "resources_analysis/colmena/resources_all.txt"
 
 #number of buckets of the cold_bucketing strategy
 num_buckets = 2

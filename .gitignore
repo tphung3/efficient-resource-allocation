@@ -1,7 +1,2 @@
-/datasets
-env.tar.gz
-/full_sweep_resources_summary
-/full_sweep_results
-full_sweep_debug.log
-full_sweep_transactions.log
-
+resources_analysis/colmena/plots/*
+resources_analysis/colmena/results/*

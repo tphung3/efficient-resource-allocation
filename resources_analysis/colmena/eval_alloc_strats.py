@@ -529,8 +529,8 @@ plt.savefig(plot_dir + "2_buckets_change_cold_starts.png")
 #fix number of cold strats, change number of buckets
 plot_wmem_t = []
 plot_wcores_t = []
-num_buckets = [i for i in range(2, 21)]
-for i in range(2, 21):
+num_buckets = [i for i in range(1, 21)]
+for i in range(1, 21):
 	cold_bucketing(all_res, i, 20, mach_capa, 1)
 	plot_wmem_t.append(stats['wmem_t'])
 	plot_wcores_t.append(stats['wcores_t'])

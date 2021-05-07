@@ -1,8 +1,8 @@
-datasets = ["colmena", "hypersweep", "normal_large", "normal_small", "uniform_large", "uniform_small", "exponential", "bimodal", "trimodal"]
+datasets = ["colmena", "hypersweep", "normal_large", "normal_small", "uniform_large", "uniform_small", "exponential", "bimodal", "trimodal", "bimodal_small_std"]
 
 real_datasets = ["colmena", "hypersweep"]
 
-with open("Makefile_test", 'w') as f:
+with open("Makefile", 'w') as f:
 	line='all: '
 	for dataset in datasets:
 		line+=dataset+" "

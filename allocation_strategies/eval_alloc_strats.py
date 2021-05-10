@@ -5,6 +5,7 @@ import csv
 import matplotlib.pyplot as plt
 import os
 import sys
+import numpy as np
 
 #dictionary to store statistics of each strategy
 stats = {"num_tasks": 0, 
@@ -47,6 +48,9 @@ csv_file = "resources_analysis/{}/results/strategies_evaluation.csv".format(data
 #plots go here
 plot_dir = "resources_analysis/{}/plots/".format(dataset)
 
+#maximum number of tasks to process
+max_num_tasks = 2000
+
 #initialize the list to store results in a spreadsheet
 def init_csv_arr(csv_arr):
 	csv_arr = [[''], ['#buckets'], ['# cold starts'], ['diagonal?']]
@@ -64,7 +68,7 @@ def get_tasks_resources(file_name):
 	all_res = []
 	with open(file_name, 'r') as f:
 		Lines = f.readlines()
-		for line in Lines[1:]:
+		for line in Lines[1:max_num_tasks]:
 			resource = line.split(" -- ")
 			core = int(resource[1])
 			mem = int(resource[2])
@@ -114,6 +118,74 @@ def whole_machine(all_resources, machine):
 	for stat, value in stats.items():
 		rept += " {}: {}\n".format(stat, value)
 	print(rept)	
+
+#Boxing machine strategy: each task is allocated with boxes of machines in increasing order (e.g, [1/8, 1/4, 1/2, 1])
+def boxing_machine(all_resources, machine, list_portions):
+	reset_stats(stats)
+	mcore = machine[0]
+	mmem = machine[1]
+	mdisk = machine[2]
+	for task_res in all_resources:
+		tcore = task_res[0]
+		tmem = task_res[1]
+		tdisk = task_res[2]
+		ttime = task_res[3]
+		for i in range(len(list_portions)):
+			portion = list_portions[i]
+			pcore = portion*mcore
+			pmem = portion*mmem
+			pdisk = portion*mdisk
+			if (pcore < tcore or pmem < tmem or pdisk < tdisk):
+				stats["total_cores_t"] += pcore*ttime		
+				stats["total_mem_t"] += pmem*ttime		
+				stats["total_disk_t"] += pdisk*ttime
+				stats["wcores_t"] += pcore*ttime		
+				stats["wmem_t"] += pmem*ttime		
+				stats["wdisk_t"] += pdisk*ttime	
+				stats["wfail_alloc_core_t"] += pcore*ttime	
+				stats["wfail_alloc_mem_t"] += pmem*ttime	
+				stats["wfail_alloc_disk_t"] += pdisk*ttime	
+				stats["num_retries"] += 1
+				if i == len(list_portions) - 2:
+					stats["num_retries_machine"] += 1
+				else:
+					stats["num_retries_bucket"] += 1
+				stats["total_run_time"] += ttime
+			else:
+				stats["total_cores_t"] += pcore*ttime		
+				stats["total_mem_t"] += pmem*ttime		
+				stats["total_disk_t"] += pdisk*ttime
+				stats["wcores_t"] += (pcore-tcore)*ttime		
+				stats["wmem_t"] += (pmem-tmem)*ttime		
+				stats["wdisk_t"] += (pdisk-tdisk)*ttime	
+				stats["int_frag_core_t"] += (pcore-tcore)*ttime	
+				stats["int_frag_mem_t"] += (pmem-tmem)*ttime	
+				stats["int_frag_disk_t"] += (pdisk-tdisk)*ttime	
+				stats["total_run_time"] += ttime
+				break
+		stats["num_tasks"] += 1	
+	stats["avg_total_cores_t"] = stats["total_cores_t"]/stats["num_tasks"]
+	stats["avg_total_mem_t"] = stats["total_mem_t"]/stats["num_tasks"]
+	stats["avg_total_disk_t"] = stats["total_disk_t"]/stats["num_tasks"]
+	stats["avg_wcores_t"] = stats["wcores_t"]/stats["num_tasks"]
+	stats["avg_wmem_t"] = stats["wmem_t"]/stats["num_tasks"]
+	stats["avg_wdisk_t"] = stats["wdisk_t"]/stats["num_tasks"]
+	stats["avg_run_time"] = stats["total_run_time"]/stats["num_tasks"]
+	stats["avg_int_frag_core_t"] = stats["int_frag_core_t"]/stats["num_tasks"]
+	stats["avg_int_frag_mem_t"] = stats["int_frag_mem_t"]/stats["num_tasks"]
+	stats["avg_int_frag_disk_t"] = stats["int_frag_disk_t"]/stats["num_tasks"]
+	stats["avg_wfail_alloc_core_t"] = stats["wfail_alloc_core_t"]/stats["num_tasks"]
+	stats["avg_wfail_alloc_mem_t"] = stats["wfail_alloc_mem_t"]/stats["num_tasks"]
+	stats["avg_wfail_alloc_disk_t"] = stats["wfail_alloc_disk_t"]/stats["num_tasks"]
+	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
+	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
+	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
+	
+	#print out results/statistics of this strategy
+	rept = "Report for boxing machine strat with list {}:\n".format(list_portions)
+	for stat, value in stats.items():
+		rept += " {}: {}\n".format(stat, value)
+	print(rept)
 
 #declare resources strategy: each task is allocated by a manually declared amount of resources. This amount is also defined above.
 def declare_resources(all_resources, default_resources, machine_resources):
@@ -519,21 +591,343 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal):
 	    rept += " {}: {}\n".format(stat, value)
 	print(rept)
 
+#k-means bucketing strategy: In this strategy, we will classify incoming tasks into buckets based on the means of elements of buckets, then we will recompute means of buckets for next iteration.
+def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal):
+
+	#resetting stats
+	reset_stats(stats)
+	
+	#list of records of completed tasks' resources
+	all_cores = []
+	all_mem = []
+	all_disk = []
+	all_time = []
+	
+	#list of buckets with all completed tasks
+	bucket_cores = [[0] for i in range(num_buckets)]
+	bucket_mem = [[0] for i in range(num_buckets)]
+	bucket_disk = [[0] for i in range(num_buckets)]
+
+	#get machine specs
+	mcore, mmem, mdisk = mach_capa
+	
+	#loop for each task
+	for i in range(len(all_res)):
+		#get tasks' actual resources consumption
+		task_res = all_res[i]
+		
+		#initialize variables tracking waste and number of retries
+		num_retries_task = 0
+		task_waste_cores, task_waste_mem, task_waste_disk = 0, 0, 0
+		task_wfail_alloc_core, task_wfail_alloc_mem, task_wfail_alloc_disk = 0, 0, 0
+		task_int_frag_core, task_int_frag_mem, task_int_frag_disk = 0, 0, 0
+		task_num_retries_bucket, task_num_retries_machine = 0, 0		
+
+		#get tasks' actual peak resources consumption
+		tcore, tmem, tdisk, ttime = task_res
+
+		#for cold start tasks
+		if i < num_cold_start:
+
+			#update with task using whole machine
+			stats["wcores_t"] += (mcore - tcore)*ttime
+			stats["wmem_t"] += (mmem - tmem)*ttime
+			stats["wdisk_t"] += (mdisk-tdisk)*ttime
+			stats["num_tasks"] += 1
+			stats["total_run_time"] += ttime
+			stats["num_retries"] += num_retries_task
+			stats["int_frag_core_t"] += (mcore - tcore)*ttime		
+			stats["int_frag_mem_t"] += (mmem - tmem)*ttime		
+			stats["int_frag_disk_t"] += (mdisk - tdisk)*ttime		
+			stats["total_cores_t"] += mcore*ttime			
+			stats["total_mem_t"] += mmem*ttime			
+			stats["total_disk_t"] += mdisk*ttime			
+	
+			#add to lists of records
+			all_cores.append(tcore)
+			all_mem.append(tmem)
+			all_disk.append(tdisk)
+			all_time.append(ttime)
+			
+			#if we are at last iteration of cold starts, initialize buckets
+			if i == num_cold_start - 1:
+				all_cores.sort()
+				all_mem.sort()
+				all_disk.sort()
+				index = 0
+				for j in range(num_buckets):
+					bucket_cores[j] = all_cores[index:math.floor((j+1)*(len(all_cores)-1)/num_buckets) + 1]
+					bucket_mem[j] = all_mem[index:math.floor((j+1)*(len(all_mem)-1)/num_buckets)+1]
+					bucket_disk[j] = all_disk[index:math.floor((j+1)*(len(all_disk)-1)/num_buckets)+1]
+					index = math.floor((j+1)*(len(all_cores)-1)/num_buckets) + 1		
+		else:
+			#forming buckets
+			bucket_cores_means = []
+			bucket_mem_means = []
+			bucket_disk_means = []	
+			for j in range(num_buckets):
+				bucket_cores_means.append(np.mean(bucket_cores[j]))
+				bucket_mem_means.append(np.mean(bucket_mem[j]))
+				bucket_disk_means.append(np.mean(bucket_disk[j]))
+			
+			bucket_cores = [[0] for i in range(num_buckets)]
+			bucket_mem = [[0] for i in range(num_buckets)]
+			bucket_disk = [[0] for i in range(num_buckets)]
+			for j in range(len(all_cores)):
+				core = all_cores[j]
+				mem = all_mem[j]
+				disk = all_disk[j]
+				#add core
+				for k in range(num_buckets):
+					if k == num_buckets-1:
+						bucket_cores[k].append(core)
+					elif abs(core-bucket_cores_means[k]) < abs(core-bucket_cores_means[k+1]):
+						bucket_cores[k].append(core)
+						break
+					elif abs(core-bucket_cores_means[k]) == abs(core-bucket_cores_means[k+1]):
+						if len(bucket_cores[k]) == 1:
+							bucket_cores[k].append(core)
+							break
+						else:
+							bucket_cores[k+1].append(core)
+							break
+				#add mem
+				for k in range(num_buckets):
+					if k == num_buckets-1:
+						bucket_mem[k].append(mem)
+					elif abs(mem-bucket_mem_means[k]) < abs(mem-bucket_mem_means[k+1]):
+						bucket_mem[k].append(mem)
+						break
+					elif abs(mem-bucket_mem_means[k]) == abs(mem-bucket_mem_means[k+1]):
+						if len(bucket_mem[k]) == 1:
+							bucket_mem[k].append(mem)
+							break
+						else:
+							bucket_mem[k+1].append(mem)
+							break
+				#add disk
+				for k in range(num_buckets):
+					if k == num_buckets-1:
+						bucket_disk[k].append(disk)
+					elif abs(disk-bucket_disk_means[k]) < abs(disk-bucket_disk_means[k+1]):
+						bucket_disk[k].append(disk)
+						break
+					elif abs(disk-bucket_disk_means[k]) == abs(disk-bucket_disk_means[k+1]):
+						if len(bucket_disk[k]) == 1:
+							bucket_disk[k].append(disk)
+							break
+						else:
+							bucket_disk[k+1].append(disk)
+							break
+
+			for j in range(num_buckets):
+				bucket_cores[j] = bucket_cores[j][1:]
+				bucket_mem[j] = bucket_mem[j][1:]
+				bucket_disk[j] = bucket_disk[j][1:]
+
+			#get waste of this task
+			#declare variables to track number of retries, etc.
+			num_retries_task_core = 0
+			num_retries_task_mem = 0
+			num_retries_task_disk = 0
+			cores_used = 0
+			mem_used = 0
+			disk_used = 0
+					
+			#loop for trying buckets in an increasing order
+			if diagonal==1:
+				for j in range(len(bucket_cores)):
+
+					#get the upper bound of buckets
+					mark_core = max(bucket_cores[j])
+					mark_mem = max(bucket_mem[j])
+					mark_disk = max(bucket_disk[j])
+
+					#if upper bound is exceeded
+					if tcore > mark_core or tmem > mark_mem or tdisk > mark_disk:
+						num_retries_task += 1
+						task_waste_cores += mark_core
+						task_waste_mem += mark_mem
+						task_waste_disk += mark_disk
+						task_wfail_alloc_core += mark_core
+						task_wfail_alloc_mem += mark_mem
+						task_wfail_alloc_disk += mark_disk
+						task_num_retries_bucket += 1
+						stats["total_cores_t"] += mark_core*ttime
+						stats["total_mem_t"] += mark_mem*ttime
+						stats["total_disk_t"] += mark_disk*ttime
+						#if we are at the last bucket, must use whole machine
+						if j == len(bucket_cores)-1:
+							task_waste_cores += mcore-tcore
+							task_waste_mem += mmem-tmem
+							task_waste_disk += mdisk-tdisk
+							cores_used = mcore
+							mem_used = mmem
+							disk_used = mdisk
+							task_int_frag_core = mcore-tcore
+							task_int_frag_mem = mmem-tmem
+							task_int_frag_disk = mdisk-tdisk
+							task_num_retries_machine += 1
+							num_retries_task += 1
+							stats["total_cores_t"] += mcore*ttime
+							stats["total_mem_t"] += mmem*ttime
+							stats["total_disk_t"] += mdisk*ttime	
+
+					#otherwise, successful resources allocation
+					else:
+						task_waste_cores += mark_core-tcore
+						task_waste_mem += mark_mem-tmem
+						task_waste_disk += mark_disk-tdisk
+						cores_used = mark_core
+						mem_used = mark_mem
+						disk_used = mark_disk
+						task_int_frag_core = mark_core-tcore
+						task_int_frag_mem = mark_mem-tmem
+						task_int_frag_disk = mark_disk-tdisk
+						stats["total_cores_t"] += mark_core*ttime
+						stats["total_mem_t"] += mark_mem*ttime
+						stats["total_disk_t"] += mark_disk*ttime
+						break
+			else:
+				allocate_task_success = 0
+				#index for cores, memory, and disk buckets to increment
+				ci, mi, di = 0, 0, 0
+				j = 0
+				while allocate_task_success != 1:
+		
+					#get the upper bound of buckets
+					mark_core = max(bucket_cores[ci])
+					mark_mem = max(bucket_mem[mi])
+					mark_disk = max(bucket_disk[di])
+
+					#if upper bound is exceeded
+					if tcore > mark_core or tmem > mark_mem or tdisk > mark_disk:
+						#only increment index of whichever resource is exceeded
+						if tcore > mark_core:
+							ci += 1
+						elif tmem > mark_mem:
+							mi += 1
+						elif tdisk > mark_disk:
+							di += 1
+						else:
+							print("Error in cold bucketing strategy. Exiting...")
+							exit(10)
+						num_retries_task += 1
+						task_waste_cores += mark_core
+						task_waste_mem += mark_mem
+						task_waste_disk += mark_disk
+						task_wfail_alloc_core += mark_core
+						task_wfail_alloc_mem += mark_mem
+						task_wfail_alloc_disk += mark_disk
+						task_num_retries_bucket += 1
+						stats["total_cores_t"] += mark_core*ttime
+						stats["total_mem_t"] += mark_mem*ttime
+						stats["total_disk_t"] += mark_disk*ttime				
+
+						#if we are at the last bucket of any type of resources, must use whole machine
+						if ci == len(bucket_cores) or mi == len(bucket_mem) or di == len(bucket_disk):
+							task_waste_cores += mcore-tcore
+							task_waste_mem += mmem-tmem
+							task_waste_disk += mdisk-tdisk
+							cores_used = mcore
+							mem_used = mmem
+							disk_used = mdisk
+							allocate_task_success = 1
+							task_int_frag_core = mcore-tcore
+							task_int_frag_mem = mmem-tmem
+							task_int_frag_disk = mdisk-tdisk
+							task_num_retries_machine += 1
+							num_retries_task += 1
+							stats["total_cores_t"] += mcore*ttime
+							stats["total_mem_t"] += mmem*ttime
+							stats["total_disk_t"] += mdisk*ttime
+
+					#otherwise
+					else:
+						task_waste_cores += mark_core-tcore
+						task_waste_mem += mark_mem-tmem
+						task_waste_disk += mark_disk-tdisk
+						cores_used = mark_core
+						mem_used = mark_mem
+						disk_used = mark_disk
+						allocate_task_success = 1
+						task_int_frag_core = mark_core - tcore
+						task_int_frag_mem = mark_mem - tmem
+						task_int_frag_disk = mark_disk - tdisk
+						stats["total_cores_t"] += mark_core*ttime
+						stats["total_mem_t"] += mark_mem*ttime
+						stats["total_disk_t"] += mark_disk*ttime
+
+			#update stats, assuming tasks fail at the end of their executions.
+			stats["num_retries"] += num_retries_task
+			stats["num_tasks"] += 1
+			stats["total_run_time"] += (num_retries_task+1)*ttime			
+			stats["wfail_alloc_core_t"] += task_wfail_alloc_core*ttime
+			stats["wfail_alloc_mem_t"] += task_wfail_alloc_mem*ttime
+			stats["wfail_alloc_disk_t"] += task_wfail_alloc_disk*ttime
+			stats["int_frag_core_t"] += task_int_frag_core*ttime
+			stats["int_frag_mem_t"] += task_int_frag_mem*ttime
+			stats["int_frag_disk_t"] += task_int_frag_disk*ttime
+			stats["num_retries_bucket"] += task_num_retries_bucket			
+			stats["num_retries_machine"] += task_num_retries_machine
+			stats["wcores_t"] += task_wfail_alloc_core*ttime + task_int_frag_core*ttime
+			stats["wmem_t"] += task_wfail_alloc_mem*ttime + task_int_frag_mem*ttime
+			stats["wdisk_t"] += task_wfail_alloc_disk*ttime + task_int_frag_disk*ttime
+
+			#add to list of records
+			all_cores.append(tcore)
+			all_mem.append(tmem)
+			all_disk.append(tdisk)
+			all_time.append(ttime)
+
+	stats["avg_total_cores_t"] = stats["total_cores_t"]/stats["num_tasks"]
+	stats["avg_total_mem_t"] = stats["total_mem_t"]/stats["num_tasks"]
+	stats["avg_total_disk_t"] = stats["total_disk_t"]/stats["num_tasks"]	
+	stats["avg_wcores_t"] = stats["wcores_t"]/stats["num_tasks"]
+	stats["avg_wmem_t"] = stats["wmem_t"]/stats["num_tasks"]
+	stats["avg_wdisk_t"] = stats["wdisk_t"]/stats["num_tasks"]
+	stats["avg_run_time"] = stats["total_run_time"]/stats["num_tasks"]
+	stats["avg_wfail_alloc_core_t"] = stats["wfail_alloc_core_t"]/stats["num_tasks"]
+	stats["avg_wfail_alloc_mem_t"] = stats["wfail_alloc_mem_t"]/stats["num_tasks"]
+	stats["avg_wfail_alloc_disk_t"] = stats["wfail_alloc_disk_t"]/stats["num_tasks"]
+	stats["avg_int_frag_core_t"] = stats["int_frag_core_t"]/stats["num_tasks"]
+	stats["avg_int_frag_mem_t"] = stats["int_frag_mem_t"]/stats["num_tasks"]
+	stats["avg_int_frag_disk_t"] = stats["int_frag_disk_t"]/stats["num_tasks"]
+	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
+	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
+	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
+	
+	#print out results/statistics of this strategy
+	rept = "Report for k-means bucketing with {} buckets and {} cold tasks and {} diagonal strat:\n".format(num_buckets, num_cold_start, diagonal)
+	for stat, value in stats.items():
+	    rept += " {}: {}\n".format(stat, value)
+	print(rept)
+
 #wrapper to record results of strategies to create spreadsheet of statistics
 def wrapper_csv(type_sim, params):
 	csv_arr[0].append(type_sim)
-	if len(params) == 2:
+	if type_sim == "whole_machine":
 		whole_machine(params[0], params[1])
 		csv_arr[1].append('x')
 		csv_arr[2].append('x')
 		csv_arr[3].append('x')
-	elif len(params) == 3:
+	elif type_sim == "declare_resources":
 		declare_resources(params[0], params[1], params[2])
 		csv_arr[1].append('x')
 		csv_arr[2].append('x')
 		csv_arr[3].append('x')
-	else:
+	elif type_sim == "boxing_machine":
+		boxing_machine(params[0], params[1], params[2])
+		csv_arr[1].append('x')
+		csv_arr[2].append('x')
+		csv_arr[3].append(params[2])
+	elif type_sim == "cold_bucketing":
 		cold_bucketing(params[0], params[1], params[2], params[3], params[4])
+		csv_arr[1].append(params[1])
+		csv_arr[2].append(params[2])
+		csv_arr[3].append(params[4])
+	elif type_sim == "k_means_bucketing":
+		k_means_bucketing(params[0], params[1], params[2], params[3], params[4])
 		csv_arr[1].append(params[1])
 		csv_arr[2].append(params[2])
 		csv_arr[3].append(params[4])
@@ -551,9 +945,15 @@ all_res = get_tasks_resources(res_file)
 csv_arr = init_csv_arr(csv_arr)
 #evaluate methods
 wrapper_csv("whole_machine", [all_res, mach_capa])
+wrapper_csv("boxing_machine", [all_res, mach_capa, [1/8, 1/4, 1/2, 1]])
+wrapper_csv("boxing_machine", [all_res, mach_capa, [1/4, 1/2, 1]])
+wrapper_csv("boxing_machine", [all_res, mach_capa, [1/4, 1/2, 3/4, 1]])
 wrapper_csv("declare_resources", [all_res, def_res, mach_capa]) 
 wrapper_csv("cold_bucketing", [all_res, 2, 10, mach_capa, 1])
 wrapper_csv("cold_bucketing", [all_res, 2, 10, mach_capa, 0])
+wrapper_csv("k_means_bucketing", [all_res, 2, 10, mach_capa, 1])
+wrapper_csv("k_means_bucketing", [all_res, 2, 10, mach_capa, 0])
+wrapper_csv("k_means_bucketing", [all_res, 2, 5, mach_capa, 1])
 wrapper_csv("cold_bucketing", [all_res, 2, 5, mach_capa, 1])
 wrapper_csv("cold_bucketing", [all_res, 3, 10, mach_capa, 1])
 wrapper_csv("cold_bucketing", [all_res, 3, 5, mach_capa, 1])

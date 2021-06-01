@@ -1,4 +1,4 @@
-datasets = ["colmena", "hypersweep", "normal_large", "normal_small", "uniform_large", "uniform_small", "exponential", "bimodal", "trimodal", "bimodal_small_std"]
+datasets = ["colmena", "hypersweep", "normal_large", "normal_small", "uniform_large", "uniform_small", "exponential", "bimodal", "trimodal", "bimodal_small_std", "trimodal_small_std"]
 
 real_datasets = ["colmena", "hypersweep"]
 
@@ -21,6 +21,7 @@ with open("Makefile", 'w') as f:
 		block += "{}_get_plots: \n".format(dataset)
 		block += "\tpython allocation_strategies/plot_resources.py {}\n\n".format(dataset)
 		f.write(block)
-
+	clean = "clean:\n\trm resource_analysis/*/plots/*; rm resource_analysis/*/results/*"
+	f.write(clean)
 	
 	

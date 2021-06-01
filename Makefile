@@ -1,4 +1,4 @@
-all: colmena hypersweep normal_large normal_small uniform_large uniform_small exponential bimodal trimodal bimodal_small_std 
+all: colmena hypersweep normal_large normal_small uniform_large uniform_small exponential bimodal trimodal bimodal_small_std trimodal_small_std 
 
 colmena: colmena_get_resources colmena_get_results colmena_get_plots
 
@@ -85,4 +85,12 @@ bimodal_small_std_get_results:
 
 bimodal_small_std_get_plots: 
 	python allocation_strategies/plot_resources.py bimodal_small_std
+
+trimodal_small_std: trimodal_small_std_get_results trimodal_small_std_get_plots
+
+trimodal_small_std_get_results: 
+	python allocation_strategies/eval_alloc_strats.py trimodal_small_std
+
+trimodal_small_std_get_plots: 
+	python allocation_strategies/plot_resources.py trimodal_small_std
 

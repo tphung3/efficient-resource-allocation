@@ -1067,3 +1067,54 @@ ax2.plot(num_buckets, plot_wmem_t, color='blue', marker='o')
 ax2.set_ylabel("wmem_t - Waste in memory over time")
 ax2.set_ylim(ymin=0)
 plt.savefig(plot_dir + "20_cold_starts_change_num_buckets.png")
+
+#plot core utilization
+fig = plt.figure()
+ax = fig.add_axes([0,0,1,1])
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-20-1','cold1-10-0','cold2-10-0','cold2-10-1','cold2-5-1','cold3-10-1']
+util_level = csv_arr[13][1:]
+ax.bar(strats, util_level)
+plt.xticks(rotation=90)
+plt.ylim(top=1)
+plt.title('Core utilization for all strats')
+plt.ylabel('Util level')
+rects = ax.patches
+labels = [round(i, 2) for i in util_level]
+for rect, label in zip(rects, labels):
+	height = rect.get_height()
+	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
+plt.savefig(plot_dir + 'cores_util_all_strats.png', bbox_inches='tight')
+
+#plot memory utilization
+fig = plt.figure()
+ax = fig.add_axes([0,0,1,1])
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-20-1','cold1-10-0','cold2-10-0','cold2-10-1','cold2-5-1','cold3-10-1']
+util_level = csv_arr[22][1:]
+ax.bar(strats, util_level)
+plt.xticks(rotation=90)
+plt.ylim(top=1)
+plt.title('Memory utilization for all strats')
+plt.ylabel('Util level')
+rects = ax.patches
+labels = [round(i, 2) for i in util_level]
+for rect, label in zip(rects, labels):
+	height = rect.get_height()
+	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
+plt.savefig(plot_dir + 'memory_util_all_strats.png', bbox_inches='tight')
+
+#plot disk utilization
+fig = plt.figure()
+ax = fig.add_axes([0,0,1,1])
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-20-1','cold1-10-0','cold2-10-0','cold2-10-1','cold2-5-1','cold3-10-1']
+util_level = csv_arr[31][1:]
+ax.bar(strats, util_level)
+plt.xticks(rotation=90)
+plt.ylim(top=1)
+plt.title('Disk utilization for all strats')
+plt.ylabel('Util level')
+rects = ax.patches
+labels = [round(i, 2) for i in util_level]
+for rect, label in zip(rects, labels):
+	height = rect.get_height()
+	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
+plt.savefig(plot_dir + 'disk_util_all_strats.png', bbox_inches='tight')

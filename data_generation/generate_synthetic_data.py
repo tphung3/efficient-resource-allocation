@@ -1,7 +1,13 @@
 import numpy as np
 import os
 import math
+import sys
 
+#fix seed for consistent datasets
+seed=20210602
+np.random.seed(seed)
+
+level = 'lv3'
 data_dir = "resources_data/"
 num_tasks = 200
 analysis_dir = "resources_analysis/"
@@ -39,9 +45,11 @@ def exponential(scale, size):
 def bimodal(mean1, mean2, std1, std2, num_tasks):
 	mem1 = np.random.normal(mean1, std1, num_tasks//2)
 	mem2 = np.random.normal(mean2, std2, num_tasks//2)
-	mem = np.concatenate((mem1, mem2))
-	np.random.shuffle(mem)
-	return mem
+	mem1_tag = [[i, 1] for i in mem1]
+	mem2_tag = [[i, 2] for i in mem2]
+	mem_tag = np.concatenate((mem1_tag, mem2_tag))
+	np.random.shuffle(mem_tag)
+	return mem_tag
 
 def trimodal(mean1, mean2, std1, std2, mean3, std3, num_tasks):
 	mem1 = np.random.normal(mean1, std1, num_tasks//3)
@@ -51,6 +59,10 @@ def trimodal(mean1, mean2, std1, std2, mean3, std3, num_tasks):
 	np.random.shuffle(mem)
 	return mem
 
+#testing
+generate_data_dir("bimodal", bimodal(32000, 11000, 8000, 2000, 200))
+
+"""
 generate_data_dir("normal_large", normal(32000, 11000, 200))
 generate_data_dir("normal_small", normal(8000, 2000, 200))
 generate_data_dir("uniform_large", uniform(10000, 40000, 200))
@@ -60,3 +72,4 @@ generate_data_dir("bimodal", bimodal(32000, 11000, 8000, 2000, 200))
 generate_data_dir("trimodal", trimodal(32000, 11000, 4000, 1000, 16000, 4000, 200))
 generate_data_dir("bimodal_small_std", bimodal(32000, 8000, 500, 200, 200))
 generate_data_dir("trimodal_small_std", trimodal(32000, 11000, 500, 500, 16000, 500, 200))
+"""

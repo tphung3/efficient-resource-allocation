@@ -27,7 +27,6 @@ with open(resources_log, "r") as f:
 		vir_mem = line.split('"virtual_memory":[')[1].split(',"MB"]')[0]
 		resource = [task_id, core, memory, vir_mem, disk, time, average_cores]
 		resources_all.append(resource)
-		print("task " + task_id + " processed successfully!") 
 
 #write to file the formatted summary of consumption
 summaries = 'resources_data/{}/{}/data/'.format(level, dataset)

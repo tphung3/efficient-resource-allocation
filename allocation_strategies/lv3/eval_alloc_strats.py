@@ -52,7 +52,7 @@ csv_file = "resources_analysis/{}/{}/results/strategies_evaluation.csv".format(l
 plot_dir = "resources_analysis/{}/{}/plots/".format(level, dataset)
 
 #maximum number of tasks to process
-max_num_tasks = 2000
+max_num_tasks = -1
 
 #initialize the list to store results in a spreadsheet
 def init_csv_arr(csv_arr):

@@ -3,7 +3,7 @@
 import re
 import sys
 
-resources_all = [["taskid", "core", "memory", "virtual_memory", "disk", "time", "average_cores"]]
+resources_all = [["taskid", "core", "memory", "virtual_memory", "disk", "time", "average_cores", "tag"]]
 num = -1
 dataset = sys.argv[1]
 level = 'lv2'
@@ -28,14 +28,13 @@ with open(resources_log, "r") as f:
 		vir_mem = line.split('"virtual_memory":[')[1].split(',"MB"]')[0]
 		resource = [task_id, core, memory, vir_mem, disk, time, average_cores]
 		resources_all.append(resource)
-		print("task " + task_id + " processed successfully!") 
 
 #write to file the formatted summary of consumption
 summaries = 'resources_data/{}/{}/data/'.format(level, dataset)
 with open(summaries+"resources_all.txt", "w") as f:
 	for resource in resources_all:
 		try:
-			line = resource[0]+" -- "+resource[1]+" -- "+resource[2]+" -- "+resource[3]+" -- "+resource[4] + " -- "+resource[5]+" -- "+resource[6]
+			line = resource[0]+" -- "+resource[1]+" -- "+resource[2]+" -- "+resource[3]+" -- "+resource[4] + " -- "+resource[5]+" -- "+resource[6] + " -- 1"
 		except:
 			continue
 		f.write(str(line) + "\n")

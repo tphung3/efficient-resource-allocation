@@ -53,7 +53,7 @@ csv_file = "resources_analysis/{}/{}/results/strategies_evaluation.csv".format(l
 plot_dir = "resources_analysis/{}/{}/plots/".format(level, dataset)
 
 #maximum number of tasks to process
-max_num_tasks = 2000
+max_num_tasks = -1
 
 #initialize the list to store results in a spreadsheet
 def init_csv_arr(csv_arr):
@@ -78,7 +78,8 @@ def get_tasks_resources(file_name):
 			mem = int(resource[2])
 			disk = int(resource[4])
 			time = round(float(resource[5]), 2)
-			all_res.append([core, mem, disk, time])
+			tag = int(resource[7])
+			all_res.append([core, mem, disk, time, tag])
 	return all_res
 
 #Whole machine strategy: each task is allocated a whole machine with capacity defined above
@@ -196,7 +197,7 @@ def declare_resources(all_resources, default_resources, machine_resources):
 	mdisk = machine_resources[2]	
 
 	for task_res in all_resources:
-		tcore, tmem, tdisk, ttime = task_res
+		tcore, tmem, tdisk, ttime, ttag = task_res
 		fail = tcore > dcore or tmem > dmem or tdisk > ddisk
 		stats["wcores_t"] += (dcore+fail*mcore-tcore)*ttime
 		stats["wmem_t"] += (dmem+fail*mmem-tmem)*ttime
@@ -329,9 +330,9 @@ def bucketing(all_res, num_buckets):
 	print(rept)
 
 #plot buckets over time
-def plot_buckets_over_time(strat_name, all_cores, all_mem, all_disk, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start):
+def plot_buckets_over_time(strat_name, all_cores, all_mem, all_disk, all_tag, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start):
 	plt.figure(figsize=(30,10))
-	plt.scatter([i for i in range(len(all_mem))], all_mem, label="Actual memory consumption")
+	plt.scatter([i for i in range(len(all_mem))], all_mem, c=all_tag, label="Actual memory consumption")
 	for j in range(num_buckets):
 		plt.plot([i+num_cold_start for i in range(len(all_bucket_mem))], [all_bucket_mem[i][j] for i in range(len(all_bucket_mem))], label="Bucket {}".format(j+1))
 	plt.legend(bbox_to_anchor=(1.02, 1))
@@ -356,6 +357,7 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 	all_mem = []
 	all_disk = []
 	all_time = []
+	all_tag = []
 	
 	#list of buckets' upperbounds of completed tasks
 	bucket_cores = [[0] for i in range(num_buckets)]
@@ -384,11 +386,12 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 		task_num_retries_bucket, task_num_retries_machine = 0, 0		
 
 		#get tasks' actual peak resources consumption
-		tcore, tmem, tdisk, ttime = task_res
+		tcore, tmem, tdisk, ttime, ttag = task_res
 		chro_cores.append(tcore)
 		chro_mem.append(tmem)
 		chro_disk.append(tdisk)
 		chro_time.append(ttime)
+		
 
 		#for cold start tasks
 		if i < num_cold_start:
@@ -412,6 +415,7 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 			all_mem.append(tmem)
 			all_disk.append(tdisk)
 			all_time.append(ttime)
+			all_tag.append(ttag)
 		else:
 			
 			#sort all lists of records
@@ -592,6 +596,7 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 			all_mem.append(tmem)
 			all_disk.append(tdisk)
 			all_time.append(ttime)
+			all_tag.append(ttag)
 
 	stats["avg_total_cores_t"] = stats["total_cores_t"]/stats["num_tasks"]
 	stats["avg_total_mem_t"] = stats["total_mem_t"]/stats["num_tasks"]
@@ -613,7 +618,7 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 
 	#plot the dynamics of buckets
 	if bool_plot == 1:
-		plot_buckets_over_time("cold_bucketing", chro_cores, chro_mem, chro_disk, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start)
+		plot_buckets_over_time("cold_bucketing", chro_cores, chro_mem, chro_disk, all_tag, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start)
 
 #k-means bucketing strategy: In this strategy, we will classify incoming tasks into buckets based on the means of elements of buckets, then we will recompute means of buckets for next iteration.
 def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot):
@@ -632,6 +637,7 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 	all_mem = []
 	all_disk = []
 	all_time = []
+	all_tag = []
 	
 	#list of buckets with all completed tasks
 	bucket_cores = [[0] for i in range(num_buckets)]
@@ -659,7 +665,7 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 		task_num_retries_bucket, task_num_retries_machine = 0, 0		
 
 		#get tasks' actual peak resources consumption
-		tcore, tmem, tdisk, ttime = task_res
+		tcore, tmem, tdisk, ttime, ttag = task_res
 
 		chro_cores.append(tcore)
 		chro_mem.append(tmem)
@@ -688,6 +694,7 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 			all_mem.append(tmem)
 			all_disk.append(tdisk)
 			all_time.append(ttime)
+			all_tag.append(ttag)
 
 			#if we are at last iteration of cold starts, initialize buckets
 			if i == num_cold_start - 1:
@@ -962,6 +969,7 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 			all_mem.append(tmem)
 			all_disk.append(tdisk)
 			all_time.append(ttime)
+			all_tag.append(ttag)
 			
 	stats["avg_total_cores_t"] = stats["total_cores_t"]/stats["num_tasks"]
 	stats["avg_total_mem_t"] = stats["total_mem_t"]/stats["num_tasks"]
@@ -983,7 +991,7 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 	
 	#plot the dynamics of buckets
 	if bool_plot == 1:
-		plot_buckets_over_time("k_means_bucketing", chro_cores, chro_mem, chro_disk, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start)	
+		plot_buckets_over_time("k_means_bucketing", chro_cores, chro_mem, chro_disk, all_tag, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start)	
 
 #wrapper to record results of strategies to create spreadsheet of statistics
 def wrapper_csv(type_sim, params):

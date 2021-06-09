@@ -69,6 +69,9 @@ def reset_stats(stats):
 #read in tasks' resources consumption
 def get_tasks_resources(file_name):
 	all_res = []
+	global max_num_tasks
+	if dataset == 'hypersweep':
+		max_num_tasks = 2000
 	with open(file_name, 'r') as f:
 		Lines = f.readlines()
 		for line in Lines[1:max_num_tasks]:

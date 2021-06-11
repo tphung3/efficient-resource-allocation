@@ -10,18 +10,18 @@ import copy
 
 #dictionary to store statistics of each strategy
 stats = {"num_tasks": 0, 
-		 "total_cores_t": 0, "avg_total_cores_t": 0,
-		 "wcores_t": 0, "avg_wcores_t": 0, "wfail_alloc_core_t": 0,
+		 "total_cores_t": 0, "avg_total_cores_t": 0, "no_cold_total_cores_t": 0,
+		 "wcores_t": 0, "no_cold_wcores_t": 0, "avg_wcores_t": 0, "wfail_alloc_core_t": 0,
 		 "avg_wfail_alloc_core_t": 0, "int_frag_core_t": 0, "avg_int_frag_core_t": 0, 
-		 "cores_t_utilization": 0,
+		 "cores_t_utilization": 0, "no_cold_cores_t_util": 0,
 		 "total_mem_t": 0, "avg_total_mem_t": 0, "no_cold_total_mem_t": 0,
 		 "wmem_t": 0, "avg_wmem_t": 0, "wfail_alloc_mem_t": 0, "no_cold_wmem_t": 0,
 		 "avg_wfail_alloc_mem_t": 0, "int_frag_mem_t": 0, "avg_int_frag_mem_t": 0, 
 		 "mem_t_utilization": 0, "no_cold_mem_t_util": 0,
-		 "total_disk_t": 0, "avg_total_disk_t": 0,
-		 "wdisk_t": 0, "avg_wdisk_t": 0, "wfail_alloc_disk_t": 0,
+		 "total_disk_t": 0, "avg_total_disk_t": 0, "no_cold_total_disk_t": 0,
+		 "wdisk_t": 0, "no_cold_wdisk_t": 0, "avg_wdisk_t": 0, "wfail_alloc_disk_t": 0,
 		 "avg_wfail_alloc_disk_t": 0, "int_frag_disk_t": 0, "avg_int_frag_disk_t": 0, 
-		 "disk_t_utilization": 0,
+		 "disk_t_utilization": 0, "no_cold_disk_t_util": 0,
 		 "num_retries": 0, "num_retries_bucket": 0, "num_retries_machine": 0,
 		 "total_run_time": 0, "avg_run_time": 0}
 
@@ -1070,8 +1070,12 @@ def easy_bucketing(all_res, mach_capa, num_cold_start):
 			stats["total_cores_t"] += (lcore+fail*mcore)*ttime
 			stats["total_mem_t"] += (lmem+fail*mmem)*ttime
 			stats["total_disk_t"] += (ldisk+fail*mdisk)*ttime
+			stats["no_cold_total_cores_t"] += (lcore+fail*mcore)*ttime
 			stats["no_cold_total_mem_t"] += (lmem+fail*mmem)*ttime
+			stats["no_cold_total_disk_t"] += (ldisk+fail*mdisk)*ttime
+			stats["no_cold_wcores_t"] += (lcore+fail*mcore-tcore)*ttime
 			stats["no_cold_wmem_t"] += (lmem+fail*mmem-tmem)*ttime
+			stats["no_cold_wdisk_t"] += (ldisk+fail*mmem-tdisk)*ttime
 
 			#add to list of records
 			all_cores[tag-1].append(tcore)
@@ -1092,7 +1096,9 @@ def easy_bucketing(all_res, mach_capa, num_cold_start):
 	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
 	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
 	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
+	stats["no_cold_cores_t_util"] = 1 - stats["no_cold_wcores_t"]/stats["no_cold_total_cores_t"]
 	stats["no_cold_mem_t_util"] = 1 - stats["no_cold_wmem_t"]/stats["no_cold_total_mem_t"]
+	stats["no_cold_disk_t_util"] = 1 - stats["no_cold_wdisk_t"]/stats["no_cold_total_disk_t"]
 
 #wrapper to record results of strategies to create spreadsheet of statistics
 def wrapper_csv(type_sim, params):

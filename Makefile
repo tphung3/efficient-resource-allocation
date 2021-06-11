@@ -264,5 +264,5 @@ lobsterCMSanalysis_lv3_get_results:
 lobsterCMSanalysis_lv3_get_plots: 
 	python allocation_strategies/lv3/plot_resources.py lobsterCMSanalysis
 
-clean:
-	rm resource_analysis/*/plots/*; rm resource_analysis/*/results/*
+clean: 
+	

@@ -30,7 +30,9 @@ with open("Makefile", 'w') as f:
 			block += "{}_{}_get_plots: \n".format(dataset, level)
 			block += "\tpython allocation_strategies/{}/plot_resources.py {}\n\n".format(level, dataset)
 			f.write(block)
-	clean = "clean:\n\trm resource_analysis/*/plots/*; rm resource_analysis/*/results/*"
+	clean='clean: \n\t'
+	for level in levels:
+		clean += "rm resource_analysis/{}/*/plots/*; rm resource_analysis/{}/*/results/*;\\ \n\t".format(level, level)
 	f.write(clean)
 	
 	

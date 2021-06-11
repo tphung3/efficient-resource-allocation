@@ -9,7 +9,7 @@ np.random.seed(seed)
 
 level = 'lv2'
 data_dir = "resources_data/{}/".format(level)
-num_tasks = 200
+num_tasks = 2000
 analysis_dir = "resources_analysis/{}/".format(level)
 
 def generate_data_dir(name, mem):
@@ -67,12 +67,12 @@ def trimodal(mean1, mean2, std1, std2, mean3, std3, num_tasks):
 	np.random.shuffle(mem_tag)
 	return mem_tag
 
-generate_data_dir("normal_large", normal(32000, 11000, 200))
-generate_data_dir("normal_small", normal(8000, 2000, 200))
-generate_data_dir("uniform_large", uniform(10000, 40000, 200))
-generate_data_dir("uniform_small", uniform(1000, 4000, 200))
-generate_data_dir("exponential", exponential(20000, (200)))
-generate_data_dir("bimodal", bimodal(32000, 11000, 8000, 2000, 200))
-generate_data_dir("trimodal", trimodal(32000, 11000, 4000, 1000, 16000, 4000, 200))
-generate_data_dir("bimodal_small_std", bimodal(32000, 8000, 500, 200, 200))
-generate_data_dir("trimodal_small_std", trimodal(32000, 11000, 500, 500, 16000, 500, 200))
+generate_data_dir("normal_large", normal(32000, 11000, num_tasks))
+generate_data_dir("normal_small", normal(8000, 2000, num_tasks))
+generate_data_dir("uniform_large", uniform(10000, 40000, num_tasks))
+generate_data_dir("uniform_small", uniform(1000, 4000, num_tasks))
+generate_data_dir("exponential", exponential(20000, (num_tasks)))
+generate_data_dir("bimodal", bimodal(32000, 11000, 8000, 2000, num_tasks))
+generate_data_dir("trimodal", trimodal(32000, 11000, 4000, 1000, 16000, 4000, num_tasks))
+generate_data_dir("bimodal_small_std", bimodal(32000, 8000, 500, 200, num_tasks))
+generate_data_dir("trimodal_small_std", trimodal(32000, 11000, 500, 500, 16000, 500, num_tasks))

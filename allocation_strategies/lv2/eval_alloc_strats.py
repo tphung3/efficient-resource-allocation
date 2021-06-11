@@ -10,18 +10,18 @@ import copy
 
 #dictionary to store statistics of each strategy
 stats = {"num_tasks": 0, 
-		 "total_cores_t": 0, "avg_total_cores_t": 0,
-		 "wcores_t": 0, "avg_wcores_t": 0, "wfail_alloc_core_t": 0,
+		 "total_cores_t": 0, "avg_total_cores_t": 0, "no_cold_total_cores_t": 0,
+		 "wcores_t": 0, "no_cold_wcores_t": 0, "avg_wcores_t": 0, "wfail_alloc_core_t": 0,
 		 "avg_wfail_alloc_core_t": 0, "int_frag_core_t": 0, "avg_int_frag_core_t": 0, 
-		 "cores_t_utilization": 0,
+		 "cores_t_utilization": 0, "no_cold_cores_t_util": 0,
 		 "total_mem_t": 0, "avg_total_mem_t": 0, "no_cold_total_mem_t": 0,
 		 "wmem_t": 0, "no_cold_wmem_t": 0, "avg_wmem_t": 0, "wfail_alloc_mem_t": 0,
 		 "avg_wfail_alloc_mem_t": 0, "int_frag_mem_t": 0, "avg_int_frag_mem_t": 0, 
 		 "mem_t_utilization": 0, "no_cold_mem_t_util": 0,
-		 "total_disk_t": 0, "avg_total_disk_t": 0,
-		 "wdisk_t": 0, "avg_wdisk_t": 0, "wfail_alloc_disk_t": 0,
+		 "total_disk_t": 0, "avg_total_disk_t": 0, "no_cold_total_disk_t": 0,
+		 "wdisk_t": 0, "no_cold_wdisk_t": 0, "avg_wdisk_t": 0, "wfail_alloc_disk_t": 0,
 		 "avg_wfail_alloc_disk_t": 0, "int_frag_disk_t": 0, "avg_int_frag_disk_t": 0, 
-		 "disk_t_utilization": 0,
+		 "disk_t_utilization": 0, "no_cold_disk_t_util": 0,
 		 "num_retries": 0, "num_retries_bucket": 0, "num_retries_machine": 0,
 		 "total_run_time": 0, "avg_run_time": 0}
 
@@ -80,7 +80,7 @@ def get_tasks_resources(file_name):
 			core = int(resource[1])
 			mem = int(resource[2])
 			disk = int(resource[4])
-			time = round(float(resource[5]), 2)
+			time = round(float(resource[5]), 5)
 			tag = int(resource[7])
 			all_res.append([core, mem, disk, time, tag])
 	return all_res
@@ -334,6 +334,7 @@ def bucketing(all_res, num_buckets):
 
 #plot buckets over time
 def plot_buckets_over_time(strat_name, all_cores, all_mem, all_disk, all_tag, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start):
+	#plot memory
 	plt.figure(figsize=(30,10))
 	plt.scatter([i for i in range(len(all_mem))], all_mem, c=all_tag, label="Actual memory consumption")
 	for j in range(num_buckets):
@@ -341,7 +342,51 @@ def plot_buckets_over_time(strat_name, all_cores, all_mem, all_disk, all_tag, al
 	plt.legend(bbox_to_anchor=(1.02, 1))
 	plt.title("Memory buckets over time - {}".format(strat_name))
 	plt.savefig(plot_dir+"{}_mem_{}_buckets_over_time_{}_cold_starts.png".format(strat_name, num_buckets, num_cold_start))
+	plt.close()
+	
+	#plot cores
+	plt.figure(figsize=(30,10))
+	plt.scatter([i for i in range(len(all_cores))], all_cores, c=all_tag, label="Actual memory consumption")
+	for j in range(num_buckets):
+		plt.plot([i+num_cold_start for i in range(len(all_bucket_cores))], [all_bucket_cores[i][j] for i in range(len(all_bucket_cores))], label="Bucket {}".format(j+1))
+	plt.legend(bbox_to_anchor=(1.02, 1))
+	plt.title("Cores buckets over time - {}".format(strat_name))
+	plt.savefig(plot_dir+"{}_cores_{}_buckets_over_time_{}_cold_starts.png".format(strat_name, num_buckets, num_cold_start))
+	plt.close()
 
+	#plot disk
+	plt.figure(figsize=(30,10))
+	plt.scatter([i for i in range(len(all_disk))], all_disk, c=all_tag, label="Actual memory consumption")
+	for j in range(num_buckets):
+		plt.plot([i+num_cold_start for i in range(len(all_bucket_disk))], [all_bucket_disk[i][j] for i in range(len(all_bucket_disk))], label="Bucket {}".format(j+1))
+	plt.legend(bbox_to_anchor=(1.02, 1))
+	plt.title("Disk buckets over time - {}".format(strat_name))
+	plt.savefig(plot_dir+"{}_disk_{}_buckets_over_time_{}_cold_starts.png".format(strat_name, num_buckets, num_cold_start))
+	plt.close()
+
+#generate plots to make movies
+def plot_for_movies(strat_name, chro_cores, chro_mem, chro_disk, all_tag, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start, num_movie, num_all_tasks, top):
+	plt.figure(figsize=(30,10))
+	plt.scatter([k for k in range(len(chro_mem))], chro_mem, c=all_tag, label="Actual memory consumption")
+	plt.xlim(left=0, right=num_all_tasks)
+	plt.ylim(top=top*1.05, bottom=0)
+	if num_movie < num_cold_start:
+		plt.savefig(plot_dir+"movie_000{}.png".format(num_movie))
+		plt.close()
+	else:	
+		for j in range(num_buckets):
+			plt.plot([k+num_cold_start for k in range(len(all_bucket_mem))], [all_bucket_mem[k][j] for k in range(len(all_bucket_mem))], label="Bucket {}".format(j+1))
+			plt.legend(bbox_to_anchor=(1.02, 1))
+			plt.title("Memory buckets over time - {}".format(strat_name))
+			if num_movie < 10:
+				plt.savefig(plot_dir+"movie_000{}.png".format(num_movie))
+			elif num_movie < 100:	
+				plt.savefig(plot_dir+"movie_00{}.png".format(num_movie))
+			elif num_movie < 1000:
+				plt.savefig(plot_dir+"movie_0{}.png".format(num_movie))
+			else:	
+				plt.savefig(plot_dir+"movie_{}.png".format(num_movie))
+		plt.close()
 
 #cold bucketing strategy: This strategy assumes that we have a resources log of completed tasks and allocates the remaining tasks based on this log. It divides the completed tasks into a number of equal-sized buckets (this number must be predefined) from 1 to n (assuming n buckets), with elements in bucket i always smaller than elements in bucket i+1. Then each task is allocated by the maximum element in each bucket in the increasing order (only retried if allocation fails). As we need a log of completed tasks (no completed tasks in the beginning/cold start problem), this log is achieved by running a number of tasks using whole machines. Finally, two ways of choosing buckets are implemented. Either we increase only the exceeded resources (diagonal=0) or we increase all resources/move to next buckets of all resources (diagonal=1).
 def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot):
@@ -468,7 +513,9 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 						stats["total_cores_t"] += mark_core*ttime
 						stats["total_mem_t"] += mark_mem*ttime
 						stats["total_disk_t"] += mark_disk*ttime
+						stats["no_cold_total_cores_t"] += mark_core*ttime
 						stats["no_cold_total_mem_t"] += mark_mem*ttime
+						stats["no_cold_total_disk_t"] += mark_disk*ttime
 
 						#if we are at the last bucket, must use whole machine
 						if j == len(bucket_cores)-1:
@@ -486,7 +533,9 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 							stats["total_cores_t"] += mcore*ttime
 							stats["total_mem_t"] += mmem*ttime
 							stats["total_disk_t"] += mdisk*ttime	
+							stats["no_cold_total_cores_t"] += mcore*ttime
 							stats["no_cold_total_mem_t"] += mmem*ttime
+							stats["no_cold_total_disk_t"] += mdisk*ttime
 
 					#otherwise, successful resources allocation
 					else:
@@ -502,7 +551,9 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 						stats["total_cores_t"] += mark_core*ttime
 						stats["total_mem_t"] += mark_mem*ttime
 						stats["total_disk_t"] += mark_disk*ttime
+						stats["no_cold_total_cores_t"] += mark_core * ttime
 						stats["no_cold_total_mem_t"] += mark_mem * ttime
+						stats["no_cold_total_disk_t"] += mark_disk * ttime
 						break
 			else:
 				allocate_task_success = 0
@@ -539,7 +590,9 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 						stats["total_cores_t"] += mark_core*ttime
 						stats["total_mem_t"] += mark_mem*ttime
 						stats["total_disk_t"] += mark_disk*ttime
+						stats["no_cold_total_cores_t"] += mark_core*ttime				
 						stats["no_cold_total_mem_t"] += mark_mem*ttime				
+						stats["no_cold_total_disk_t"] += mark_disk*ttime				
 
 						#if we are at the last bucket of any type of resources, must use whole machine
 						if ci == len(bucket_cores) or mi == len(bucket_mem) or di == len(bucket_disk):
@@ -558,7 +611,9 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 							stats["total_cores_t"] += mcore*ttime
 							stats["total_mem_t"] += mmem*ttime
 							stats["total_disk_t"] += mdisk*ttime
+							stats["no_cold_total_cores_t"] += mcore*ttime
 							stats["no_cold_total_mem_t"] += mmem*ttime
+							stats["no_cold_total_disk_t"] += mdisk*ttime
 
 					#otherwise
 					else:
@@ -575,7 +630,9 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 						stats["total_cores_t"] += mark_core*ttime
 						stats["total_mem_t"] += mark_mem*ttime
 						stats["total_disk_t"] += mark_disk*ttime
+						stats["no_cold_total_cores_t"] += mark_core*ttime
 						stats["no_cold_total_mem_t"] += mark_mem*ttime
+						stats["no_cold_total_disk_t"] += mark_disk*ttime
 
 			#update stats, assuming tasks fail at the end of their executions.
 			stats["num_retries"] += num_retries_task
@@ -592,7 +649,9 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 			stats["wcores_t"] += task_wfail_alloc_core*ttime + task_int_frag_core*ttime
 			stats["wmem_t"] += task_wfail_alloc_mem*ttime + task_int_frag_mem*ttime
 			stats["wdisk_t"] += task_wfail_alloc_disk*ttime + task_int_frag_disk*ttime
+			stats["no_cold_wcores_t"] += task_wfail_alloc_core*ttime + task_int_frag_core*ttime
 			stats["no_cold_wmem_t"] += task_wfail_alloc_mem*ttime + task_int_frag_mem*ttime
+			stats["no_cold_wdisk_t"] += task_wfail_alloc_disk*ttime + task_int_frag_disk*ttime
 
 			#add to list of records
 			all_cores.append(tcore)
@@ -617,14 +676,16 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
 	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
 	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
+	stats["no_cold_cores_t_util"] = 1 - stats["no_cold_wcores_t"]/stats["no_cold_total_cores_t"]
 	stats["no_cold_mem_t_util"] = 1 - stats["no_cold_wmem_t"]/stats["no_cold_total_mem_t"]
+	stats["no_cold_disk_t_util"] = 1 - stats["no_cold_wdisk_t"]/stats["no_cold_total_disk_t"]
 
 	#plot the dynamics of buckets
 	if bool_plot == 1:
 		plot_buckets_over_time("cold_bucketing", chro_cores, chro_mem, chro_disk, all_tag, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start)
 
 #k-means bucketing strategy: In this strategy, we will classify incoming tasks into buckets based on the means of elements of buckets, then we will recompute means of buckets for next iteration.
-def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot):
+def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot, bool_movie):
 
 	#resetting stats
 	reset_stats(stats)
@@ -654,6 +715,16 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 
 	#get machine specs
 	mcore, mmem, mdisk = mach_capa
+	
+	#counter for movie
+	num_movie = 0
+	num_all_tasks = len(all_res)
+	max_tmem = 0
+	for i in range(len(all_res)):
+		task_res = all_res[i]
+		tmem = task_res[1]
+		if max_tmem < tmem:
+			max_tmem = tmem
 	
 	#loop for each task
 	for i in range(len(all_res)):
@@ -732,21 +803,29 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 				disk = all_disk[j]
 				#add core
 				for k in range(num_buckets):
-					if k == num_buckets-1:
-						bucket_cores[k].append(core)
-					elif abs(core-bucket_cores_means[k]) < abs(core-bucket_cores_means[k+1]):
-						bucket_cores[k].append(core)
-						break
-					elif abs(core-bucket_cores_means[k]) == abs(core-bucket_cores_means[k+1]):
-						if len(bucket_cores[k]) == 1:
+					if k == 0:
+						if core <= bucket_cores_means[k]:
 							bucket_cores[k].append(core)
 							break
-						else:
-							bucket_cores[k+1].append(core)
-							break
+					if k == num_buckets-1:
+						bucket_cores[k].append(core)
+					elif abs(core-bucket_cores_means[k]) <= abs(core-bucket_cores_means[k+1]):
+						bucket_cores[k].append(core)
+						break
+
 				#add mem
 				for k in range(num_buckets):
+					if k == 0:
+						if mem <= bucket_mem_means[k]:
+							bucket_mem[k].append(mem)
+							break
 					if k == num_buckets-1:
+						bucket_mem[k].append(mem)
+					elif abs(mem-bucket_mem_means[k]) <= abs(mem-bucket_mem_means[k+1]):
+						bucket_mem[k].append(mem)
+						break
+
+					"""if k == num_buckets-1:
 						bucket_mem[k].append(mem)
 					elif abs(mem-bucket_mem_means[k]) < abs(mem-bucket_mem_means[k+1]):
 						bucket_mem[k].append(mem)
@@ -757,21 +836,18 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 							break
 						else:
 							bucket_mem[k+1].append(mem)
-							break
+							break"""
 				#add disk
 				for k in range(num_buckets):
-					if k == num_buckets-1:
-						bucket_disk[k].append(disk)
-					elif abs(disk-bucket_disk_means[k]) < abs(disk-bucket_disk_means[k+1]):
-						bucket_disk[k].append(disk)
-						break
-					elif abs(disk-bucket_disk_means[k]) == abs(disk-bucket_disk_means[k+1]):
-						if len(bucket_disk[k]) == 1:
+					if k == 0:
+						if disk <= bucket_disk_means[k]:
 							bucket_disk[k].append(disk)
 							break
-						else:
-							bucket_disk[k+1].append(disk)
-							break
+					if k == num_buckets-1:
+						bucket_disk[k].append(disk)
+					elif abs(disk-bucket_disk_means[k]) <= abs(disk-bucket_disk_means[k+1]):
+						bucket_disk[k].append(disk)
+						break
 
 			for j in range(num_buckets):
 				bucket_cores[j] = bucket_cores[j][1:]
@@ -841,7 +917,9 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 						stats["total_cores_t"] += mark_core*ttime
 						stats["total_mem_t"] += mark_mem*ttime
 						stats["total_disk_t"] += mark_disk*ttime
+						stats["no_cold_total_cores_t"] += mark_core*ttime
 						stats["no_cold_total_mem_t"] += mark_mem*ttime
+						stats["no_cold_total_disk_t"] += mark_disk*ttime
 
 						#if we are at the last bucket, must use whole machine
 						if j == len(bucket_cores)-1:
@@ -859,7 +937,9 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 							stats["total_cores_t"] += mcore*ttime
 							stats["total_mem_t"] += mmem*ttime
 							stats["total_disk_t"] += mdisk*ttime	
+							stats["no_cold_total_cores_t"] += mcore*ttime
 							stats["no_cold_total_mem_t"] += mmem*ttime
+							stats["no_cold_total_disk_t"] += mdisk*ttime
 
 					#otherwise, successful resources allocation
 					else:
@@ -875,7 +955,9 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 						stats["total_cores_t"] += mark_core*ttime
 						stats["total_mem_t"] += mark_mem*ttime
 						stats["total_disk_t"] += mark_disk*ttime
+						stats["no_cold_total_cores_t"] += mark_core*ttime
 						stats["no_cold_total_mem_t"] += mark_mem*ttime
+						stats["no_cold_total_disk_t"] += mark_disk*ttime
 						break
 			else:
 				allocate_task_success = 0
@@ -912,7 +994,9 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 						stats["total_cores_t"] += mark_core*ttime
 						stats["total_mem_t"] += mark_mem*ttime
 						stats["total_disk_t"] += mark_disk*ttime	
+						stats["no_cold_total_cores_t"] += mark_core*ttime			
 						stats["no_cold_total_mem_t"] += mark_mem*ttime			
+						stats["no_cold_total_disk_t"] += mark_disk*ttime			
 
 						#if we are at the last bucket of any type of resources, must use whole machine
 						if ci == len(bucket_cores) or mi == len(bucket_mem) or di == len(bucket_disk):
@@ -931,7 +1015,9 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 							stats["total_cores_t"] += mcore*ttime
 							stats["total_mem_t"] += mmem*ttime
 							stats["total_disk_t"] += mdisk*ttime
+							stats["no_cold_total_cores_t"] += mcore*ttime
 							stats["no_cold_total_mem_t"] += mmem*ttime
+							stats["no_cold_total_disk_t"] += mdisk*ttime
 
 					#otherwise
 					else:
@@ -948,7 +1034,9 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 						stats["total_cores_t"] += mark_core*ttime
 						stats["total_mem_t"] += mark_mem*ttime
 						stats["total_disk_t"] += mark_disk*ttime
+						stats["no_cold_total_cores_t"] += mark_core*ttime
 						stats["no_cold_total_mem_t"] += mark_mem*ttime
+						stats["no_cold_total_disk_t"] += mark_disk*ttime
 
 			#update stats, assuming tasks fail at the end of their executions.
 			stats["num_retries"] += num_retries_task
@@ -965,7 +1053,9 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 			stats["wcores_t"] += task_wfail_alloc_core*ttime + task_int_frag_core*ttime
 			stats["wmem_t"] += task_wfail_alloc_mem*ttime + task_int_frag_mem*ttime
 			stats["wdisk_t"] += task_wfail_alloc_disk*ttime + task_int_frag_disk*ttime
+			stats["no_cold_wcores_t"] += task_wfail_alloc_core*ttime + task_int_frag_core*ttime
 			stats["no_cold_wmem_t"] += task_wfail_alloc_mem*ttime + task_int_frag_mem*ttime
+			stats["no_cold_wdisk_t"] += task_wfail_alloc_disk*ttime + task_int_frag_disk*ttime
 
 			#add to list of records
 			all_cores.append(tcore)
@@ -973,7 +1063,13 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 			all_disk.append(tdisk)
 			all_time.append(ttime)
 			all_tag.append(ttag)
-			
+		
+		#movies or not		
+		if bool_movie > 0:
+			plot_for_movies("k-means bucketing", chro_cores, chro_mem, chro_disk, all_tag, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start, num_movie, num_all_tasks, max_tmem)
+			num_movie += 1
+		
+		
 	stats["avg_total_cores_t"] = stats["total_cores_t"]/stats["num_tasks"]
 	stats["avg_total_mem_t"] = stats["total_mem_t"]/stats["num_tasks"]
 	stats["avg_total_disk_t"] = stats["total_disk_t"]/stats["num_tasks"]	
@@ -990,7 +1086,9 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
 	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
 	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
+	stats["no_cold_cores_t_util"] = 1 - stats["no_cold_wcores_t"]/stats["no_cold_total_cores_t"]
 	stats["no_cold_mem_t_util"] = 1 - stats["no_cold_wmem_t"]/stats["no_cold_total_mem_t"]
+	stats["no_cold_disk_t_util"] = 1 - stats["no_cold_wdisk_t"]/stats["no_cold_total_disk_t"]
 	
 	#plot the dynamics of buckets
 	if bool_plot == 1:
@@ -1020,7 +1118,7 @@ def wrapper_csv(type_sim, params):
 		csv_arr[2].append(params[2])
 		csv_arr[3].append(params[4])
 	elif type_sim == "k_means_bucketing":
-		k_means_bucketing(params[0], params[1], params[2], params[3], params[4], params[5])
+		k_means_bucketing(params[0], params[1], params[2], params[3], params[4], params[5], params[6])
 		csv_arr[1].append(params[1])
 		csv_arr[2].append(params[2])
 		csv_arr[3].append(params[4])
@@ -1039,27 +1137,29 @@ csv_arr = init_csv_arr(csv_arr)
 
 #testing
 
+#def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot, bool_movie):
+#def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot):
 #evaluate methods
 wrapper_csv("whole_machine", [all_res, mach_capa])
 wrapper_csv("boxing_machine", [all_res, mach_capa, [1/8, 1/4, 1/2, 1]])
 wrapper_csv("boxing_machine", [all_res, mach_capa, [1/4, 1/2, 1]])
 wrapper_csv("boxing_machine", [all_res, mach_capa, [1/4, 1/2, 3/4, 1]])
 wrapper_csv("declare_resources", [all_res, def_res, mach_capa]) 
-wrapper_csv("k_means_bucketing", [all_res, 1, 10, mach_capa, 1, 0])
-wrapper_csv("k_means_bucketing", [all_res, 2, 10, mach_capa, 0, 0])
-wrapper_csv("k_means_bucketing", [all_res, 2, 10, mach_capa, 1, 1])
-wrapper_csv("k_means_bucketing", [all_res, 3, 10, mach_capa, 1, 1])
-wrapper_csv("k_means_bucketing", [all_res, 4, 20, mach_capa, 1, 1])
-wrapper_csv("cold_bucketing", [all_res, 1, 10, mach_capa, 0, 1])
+wrapper_csv("k_means_bucketing", [all_res, 1, 10, mach_capa, 1, 0, 0])
+wrapper_csv("k_means_bucketing", [all_res, 2, 10, mach_capa, 0, 0, 0])
+wrapper_csv("k_means_bucketing", [all_res, 2, 10, mach_capa, 1, 1, 0])
+wrapper_csv("k_means_bucketing", [all_res, 3, 10, mach_capa, 1, 1, 0])
+wrapper_csv("k_means_bucketing", [all_res, 4, 10, mach_capa, 1, 1, 0])
+wrapper_csv("cold_bucketing", [all_res, 1, 10, mach_capa, 1, 0])
 wrapper_csv("cold_bucketing", [all_res, 2, 10, mach_capa, 0, 0])
-wrapper_csv("cold_bucketing", [all_res, 2, 10, mach_capa, 1, 0])
-wrapper_csv("cold_bucketing", [all_res, 2, 5, mach_capa, 1, 1])
+wrapper_csv("cold_bucketing", [all_res, 2, 10, mach_capa, 1, 1])
 wrapper_csv("cold_bucketing", [all_res, 3, 10, mach_capa, 1, 1])
+wrapper_csv("cold_bucketing", [all_res, 4, 10, mach_capa, 1, 1])
 
 #write results to csv file
 write_csv(csv_arr, csv_file)
 
-#plotting effects of hyperparameters of cold_bucketing strategy
+"""#plotting effects of hyperparameters of cold_bucketing strategy
 #fix number of buckets, change cold starts
 plot_wmem_t = []
 plot_wcores_t = []
@@ -1098,13 +1198,13 @@ ax2 = ax.twinx()
 ax2.plot(num_buckets, plot_wmem_t, color='blue', marker='o')
 ax2.set_ylabel("wmem_t - Waste in memory over time")
 ax2.set_ylim(ymin=0)
-plt.savefig(plot_dir + "20_cold_starts_change_num_buckets.png")
+plt.savefig(plot_dir + "20_cold_starts_change_num_buckets.png")"""
 
 #plot core utilization
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1])
-strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-20-1','cold1-10-0','cold2-10-0','cold2-10-1','cold2-5-1','cold3-10-1']
-util_level = csv_arr[13][1:]
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+util_level = csv_arr[15][1:]
 ax.bar(strats, util_level)
 plt.xticks(rotation=90)
 plt.ylim(top=1)
@@ -1115,13 +1215,14 @@ labels = [round(i, 2) for i in util_level]
 for rect, label in zip(rects, labels):
 	height = rect.get_height()
 	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'cores_util_all_strats.png', bbox_inches='tight')
+plt.savefig(plot_dir + 'util_all_strats_cores.png', bbox_inches='tight')
+plt.close()
 
 #plot memory utilization
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1])
-strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-20-1','cold1-10-0','cold2-10-0','cold2-10-1','cold2-5-1','cold3-10-1']
-util_level = csv_arr[24][1:]
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+util_level = csv_arr[27][1:]
 ax.bar(strats, util_level)
 plt.xticks(rotation=90)
 plt.ylim(top=1)
@@ -1132,13 +1233,14 @@ labels = [round(i, 2) for i in util_level]
 for rect, label in zip(rects, labels):
 	height = rect.get_height()
 	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'memory_util_all_strats.png', bbox_inches='tight')
+plt.savefig(plot_dir + 'util_all_strats_memory.png', bbox_inches='tight')
+plt.close()
 
 #plot disk utilization
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1])
-strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-20-1','cold1-10-0','cold2-10-0','cold2-10-1','cold2-5-1','cold3-10-1']
-util_level = csv_arr[34][1:]
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+util_level = csv_arr[39][1:]
 ax.bar(strats, util_level)
 plt.xticks(rotation=90)
 plt.ylim(top=1)
@@ -1149,13 +1251,32 @@ labels = [round(i, 2) for i in util_level]
 for rect, label in zip(rects, labels):
 	height = rect.get_height()
 	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'disk_util_all_strats.png', bbox_inches='tight')
+plt.savefig(plot_dir + 'util_all_strats_disk.png', bbox_inches='tight')
+plt.close()
 
-#plot memory utilization
+#plot cores utilization with no cold
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1])
-strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-20-1','cold1-10-0','cold2-10-0','cold2-10-1','cold2-5-1','cold3-10-1']
-util_level = csv_arr[25][1:]
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+util_level = csv_arr[16][1:]
+ax.bar(strats, util_level)
+plt.xticks(rotation=90)
+plt.ylim(top=1)
+plt.title('Cores utilization for all strats - no cold')
+plt.ylabel('Util level')
+rects = ax.patches
+labels = [round(i, 2) for i in util_level]
+for rect, label in zip(rects, labels):
+	height = rect.get_height()
+	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
+plt.savefig(plot_dir + 'util_all_strats_cores_no_cold.png', bbox_inches='tight')
+plt.close()
+
+#plot memory utilization with no cold
+fig = plt.figure()
+ax = fig.add_axes([0,0,1,1])
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+util_level = csv_arr[28][1:]
 ax.bar(strats, util_level)
 plt.xticks(rotation=90)
 plt.ylim(top=1)
@@ -1166,5 +1287,23 @@ labels = [round(i, 2) for i in util_level]
 for rect, label in zip(rects, labels):
 	height = rect.get_height()
 	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'no_cold_memory_util_all_strats.png', bbox_inches='tight')
+plt.savefig(plot_dir + 'util_all_strats_memory_no_cold.png', bbox_inches='tight')
+plt.close()
 
+#plot disk utilization with no cold
+fig = plt.figure()
+ax = fig.add_axes([0,0,1,1])
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+util_level = csv_arr[40][1:]
+ax.bar(strats, util_level)
+plt.xticks(rotation=90)
+plt.ylim(top=1)
+plt.title('Disk utilization for all strats - no cold')
+plt.ylabel('Util level')
+rects = ax.patches
+labels = [round(i, 2) for i in util_level]
+for rect, label in zip(rects, labels):
+	height = rect.get_height()
+	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
+plt.savefig(plot_dir + 'util_all_strats_disk_no_cold.png', bbox_inches='tight')
+plt.close()

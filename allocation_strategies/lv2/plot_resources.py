@@ -54,6 +54,7 @@ def gen_mem_average_cores(mem_average_cores_use):
 chrono_cores_use = []
 chrono_disk_use = []
 chrono_mem_use = []
+chrono_time_use = []
 mem_cores_use = []
 mem_average_cores_use = []
 print("Reading..")
@@ -77,11 +78,12 @@ with open(data_dir+"resources_all.txt", "r") as f:
 		mem = int(resource[2])
 		virt_mem = int(resource[3])
 		disk = int(resource[4])
-		time = round(float(resource[5]), 2)
+		time = round(float(resource[5]), 5)
 		average_cores = round(float(resource[6]), 2)
 		chrono_cores_use.append(core)
 		chrono_mem_use.append(mem)
 		chrono_disk_use.append(disk)
+		chrono_time_use.append(time)
 		mem_cores_use.append([mem, core])
 		mem_average_cores_use.append([mem, average_cores])
 		
@@ -90,8 +92,10 @@ with open(data_dir+"resources_all.txt", "r") as f:
 gen_chronos(chrono_cores_use, "time", "cores", "Cores usage over time", "chrono_cores.png")
 gen_chronos(chrono_mem_use, "time", "mem", "Mem usage over time", "chrono_mem.png")
 gen_chronos(chrono_disk_use, "time", "disk", "Disk usage over time", "chrono_disk.png")
+gen_chronos(chrono_time_use, "time flow", "execution time", "Execution timt over time", "chrono_time.png")
 gen_dists(chrono_cores_use, "tasks in sorted order", "cores", "Cores usage distribution", "dist_cores.png")
 gen_dists(chrono_mem_use, "tasks in sorted order", "mem", "Mem usage distribution", "dist_mem.png")
 gen_dists(chrono_disk_use, "tasks in sorted order", "disk", "Disk usage distribution", "dist_disk.png")
+gen_dists(chrono_time_use, "tasks in sorted order", "time", "execution time distribution", "dist_time.png")
 gen_mem_cores(mem_cores_use)
 gen_mem_average_cores(mem_average_cores_use)

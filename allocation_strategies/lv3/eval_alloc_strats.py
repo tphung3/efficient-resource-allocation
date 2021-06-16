@@ -79,7 +79,7 @@ def get_tasks_resources(file_name):
 			core = int(resource[1])
 			mem = int(resource[2])
 			disk = int(resource[4])
-			time = round(float(resource[5]), 2)
+			time = round(float(resource[5]), 5)
 			tag = int(resource[7])
 			all_res.append([core, mem, disk, time, tag])
 	return all_res
@@ -993,8 +993,26 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 	if bool_plot == 1:
 		plot_buckets_over_time("k_means_bucketing", chro_cores, chro_mem, chro_disk, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start)	
 
+def plot_util_dists(strat_name, resource_name, all_tasks_resource_t_allocated, all_tasks_resource_t_used):
+	all_util = [all_tasks_resource_t_used[i]/all_tasks_resource_t_allocated[i] for i in range(len(all_tasks_resource_t_allocated))]
+	plt.plot([i for i in range(len(all_tasks_resource_t_allocated))], all_util)
+	plt.xlabel("Tasks' completion over time")
+	plt.ylabel("Utilization level")
+	plt.title("Chronological utilization - {} - {}".format(resource_name, strat_name))
+	plt.ylim(bottom=0, top=1)
+	plt.savefig(plot_dir+"util_dist_chrono_{}_{}".format(resource_name, strat_name))
+	plt.close()
+	all_util.sort()
+	plt.plot([i for i in range(len(all_tasks_resource_t_allocated))], all_util)
+	plt.xlabel("Tasks' sorted by util level")
+	plt.ylabel("Utilization level")
+	plt.title("Utilization - {} - {}".format(resource_name, strat_name))
+	plt.ylim(bottom=0, top=1)
+	plt.savefig(plot_dir+"util_dist_{}_{}".format(resource_name, strat_name))
+	plt.close()
+
 #easy bucketing with level 3
-def easy_bucketing(all_res, mach_capa, num_cold_start):
+def easy_bucketing(all_res, mach_capa, num_cold_start, bool_plot_util):
 	
 	#resetting stats
 	reset_stats(stats)
@@ -1014,6 +1032,13 @@ def easy_bucketing(all_res, mach_capa, num_cold_start):
 	#get machine specs
 	mcore, mmem, mdisk = mach_capa
 
+	all_tasks_cores_t_allocated = []	
+	all_tasks_mem_t_allocated = []	
+	all_tasks_disk_t_allocated = []	
+	all_tasks_cores_t_used = []
+	all_tasks_mem_t_used = []
+	all_tasks_disk_t_used = []
+
 	#loop for each task
 	for i in range(len(all_res)):
 	
@@ -1028,7 +1053,14 @@ def easy_bucketing(all_res, mach_capa, num_cold_start):
 
 		#get tasks' actual peak resources consumption and tags
 		tcore, tmem, tdisk, ttime, tag = task_res
-		
+
+		task_cores_t_allocated = 0
+		task_mem_t_allocated = 0
+		task_disk_t_allocated = 0
+		task_cores_t_used = 0	
+		task_mem_t_used = 0	
+		task_disk_t_used = 0	
+	
 		#for cold start tasks
 		if i < num_cold_start:
 			
@@ -1045,15 +1077,21 @@ def easy_bucketing(all_res, mach_capa, num_cold_start):
 			stats["total_cores_t"] += mcore*ttime			
 			stats["total_mem_t"] += mmem*ttime			
 			stats["total_disk_t"] += mdisk*ttime
-		
+				
 			#add to list of records
 			all_cores[tag-1].append(tcore)
 			all_mem[tag-1].append(tmem)
 			all_disk[tag-1].append(tdisk)
 			all_time[tag-1].append(ttime)
 		
-		else:
-			
+			task_cores_t_allocated = mcore*ttime		
+			task_mem_t_allocated = mmem*ttime		
+			task_disk_t_allocated = mdisk*ttime	
+			task_cores_t_used = tcore*ttime	
+			task_mem_t_used = tmem*ttime	
+			task_disk_t_used = tdisk*ttime	
+
+		else:	
 			lcore = max(all_cores[tag-1])
 			lmem = max(all_mem[tag-1])
 			ldisk = max(all_disk[tag-1])
@@ -1082,23 +1120,32 @@ def easy_bucketing(all_res, mach_capa, num_cold_start):
 			all_mem[tag-1].append(tmem)
 			all_disk[tag-1].append(tdisk)
 			all_time[tag-1].append(ttime)
+		
+			task_cores_t_allocated = (lcore+fail*mcore)*ttime		
+			task_mem_t_allocated = (lmem+fail*mmem)*ttime		
+			task_disk_t_allocated = (ldisk+fail*mdisk)*ttime	
+			task_cores_t_used = tcore*ttime	
+			task_mem_t_used = tmem*ttime	
+			task_disk_t_used = tdisk*ttime			
 
-	stats["avg_total_cores_t"] = stats["total_cores_t"]/stats["num_tasks"]
-	stats["avg_total_mem_t"] = stats["total_mem_t"]/stats["num_tasks"]
-	stats["avg_total_disk_t"] = stats["total_disk_t"]/stats["num_tasks"]
-	stats["avg_wcores_t"] = stats["wcores_t"]/stats["num_tasks"]
-	stats["avg_wmem_t"] = stats["wmem_t"]/stats["num_tasks"]
-	stats["avg_wdisk_t"] = stats["wdisk_t"]/stats["num_tasks"]
-	stats["avg_run_time"] = stats["total_run_time"]/stats["num_tasks"]
-	stats["avg_int_frag_core_t"] = stats["int_frag_core_t"]/stats["num_tasks"]
-	stats["avg_int_frag_mem_t"] = stats["int_frag_mem_t"]/stats["num_tasks"]
-	stats["avg_int_frag_disk_t"] = stats["int_frag_disk_t"]/stats["num_tasks"]
+		all_tasks_cores_t_allocated.append(task_cores_t_allocated)
+		all_tasks_mem_t_allocated.append(task_mem_t_allocated)
+		all_tasks_disk_t_allocated.append(task_disk_t_allocated)
+		all_tasks_cores_t_used.append(task_cores_t_used)
+		all_tasks_mem_t_used.append(task_mem_t_used)
+		all_tasks_disk_t_used.append(task_disk_t_used)
+	
 	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
 	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
 	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
 	stats["no_cold_cores_t_util"] = 1 - stats["no_cold_wcores_t"]/stats["no_cold_total_cores_t"]
 	stats["no_cold_mem_t_util"] = 1 - stats["no_cold_wmem_t"]/stats["no_cold_total_mem_t"]
 	stats["no_cold_disk_t_util"] = 1 - stats["no_cold_wdisk_t"]/stats["no_cold_total_disk_t"]
+
+	if bool_plot_util == 1:
+		plot_util_dists("easy_bucketing", "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
+		plot_util_dists("easy_bucketing", "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
+		plot_util_dists("easy_bucketing", "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
 
 #wrapper to record results of strategies to create spreadsheet of statistics
 def wrapper_csv(type_sim, params):
@@ -1129,7 +1176,7 @@ def wrapper_csv(type_sim, params):
 		csv_arr[2].append(params[2])
 		csv_arr[3].append(params[4])
 	elif type_sim == 'easy_bucketing':
-		easy_bucketing(params[0], params[1], params[2])
+		easy_bucketing(params[0], params[1], params[2], params[3])
 		csv_arr[1].append('x')
 		csv_arr[2].append(params[2])
 		csv_arr[3].append('x')
@@ -1147,7 +1194,7 @@ all_res = get_tasks_resources(res_file)
 csv_arr = init_csv_arr(csv_arr)
 
 #evaluate methods
-wrapper_csv("easy_bucketing", [all_res, mach_capa, 10])
+wrapper_csv("easy_bucketing", [all_res, mach_capa, 10, 1])
 """wrapper_csv("whole_machine", [all_res, mach_capa])
 wrapper_csv("boxing_machine", [all_res, mach_capa, [1/8, 1/4, 1/2, 1]])
 wrapper_csv("boxing_machine", [all_res, mach_capa, [1/4, 1/2, 1]])

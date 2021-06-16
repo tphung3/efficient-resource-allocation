@@ -72,6 +72,22 @@ def trimodal(mean1, mean2, std1, std2, mean3, std3, num_tasks):
 	np.random.shuffle(mem_tag)
 	return mem_tag
 
+def uniform_same(low, high, num_classes, num_tasks):
+	all_mem = []
+	for num in range(num_classes):
+		if num == num_classes - 1:
+			mem = np.random.uniform(low, high, num_tasks - (num_classes-1)*num_tasks//num_classes)
+		else:
+			mem = np.random.uniform(low, high, num_tasks//num_classes)
+		mem_tag = [[i, num+1] for i in mem]
+		all_mem.append(mem_tag)
+	all_mem_tag = []
+	for arr in all_mem:
+		for pair in arr:
+			all_mem_tag.append(pair)
+	np.random.shuffle(all_mem_tag)
+	return all_mem_tag
+
 generate_data_dir("normal_large", normal(32000, 11000, num_tasks))
 generate_data_dir("normal_small", normal(8000, 2000, num_tasks))
 generate_data_dir("uniform_large", uniform(10000, 40000, num_tasks))
@@ -82,3 +98,5 @@ generate_data_dir("bimodal", bimodal(32000, 11000, 8000, 2000, num_tasks))
 generate_data_dir("trimodal", trimodal(32000, 11000, 4000, 1000, 16000, 4000, num_tasks))
 generate_data_dir("bimodal_small_std", bimodal(32000, 8000, 500, 200, num_tasks))
 generate_data_dir("trimodal_small_std", trimodal(32000, 11000, 500, 500, 16000, 500, num_tasks))
+generate_data_dir("bimodal_same", bimodal(8000, 8000, 2000, 2000, num_tasks))
+generate_data_dir("uniform_same", uniform_same(8000, 9000, 5, num_tasks))

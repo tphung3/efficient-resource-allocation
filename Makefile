@@ -1,4 +1,4 @@
-all: colmena hypersweep normal_large normal_small uniform_large uniform_small exponential beta bimodal trimodal bimodal_small_std trimodal_small_std bioblast lobsterCMSsimulation lobsterCMSanalysis 
+all: colmena hypersweep normal_large normal_small uniform_large uniform_small uniform_same exponential beta bimodal trimodal bimodal_small_std trimodal_small_std bimodal_same bioblast lobsterCMSsimulation lobsterCMSanalysis 
 
 colmena: colmena_lv2 colmena_lv3 
 
@@ -12,6 +12,8 @@ uniform_large: uniform_large_lv2 uniform_large_lv3
 
 uniform_small: uniform_small_lv2 uniform_small_lv3 
 
+uniform_same: uniform_same_lv2 uniform_same_lv3 
+
 exponential: exponential_lv2 exponential_lv3 
 
 beta: beta_lv2 beta_lv3 
@@ -23,6 +25,8 @@ trimodal: trimodal_lv2 trimodal_lv3
 bimodal_small_std: bimodal_small_std_lv2 bimodal_small_std_lv3 
 
 trimodal_small_std: trimodal_small_std_lv2 trimodal_small_std_lv3 
+
+bimodal_same: bimodal_same_lv2 bimodal_same_lv3 
 
 bioblast: bioblast_lv2 bioblast_lv3 
 
@@ -138,6 +142,22 @@ uniform_small_lv3_get_results:
 uniform_small_lv3_get_plots: 
 	python allocation_strategies/lv3/plot_resources.py uniform_small
 
+uniform_same_lv2: uniform_same_lv2_get_results uniform_same_lv2_get_plots
+
+uniform_same_lv2_get_results: 
+	python allocation_strategies/lv2/eval_alloc_strats.py uniform_same
+
+uniform_same_lv2_get_plots: 
+	python allocation_strategies/lv2/plot_resources.py uniform_same
+
+uniform_same_lv3: uniform_same_lv3_get_results uniform_same_lv3_get_plots
+
+uniform_same_lv3_get_results: 
+	python allocation_strategies/lv3/eval_alloc_strats.py uniform_same
+
+uniform_same_lv3_get_plots: 
+	python allocation_strategies/lv3/plot_resources.py uniform_same
+
 exponential_lv2: exponential_lv2_get_results exponential_lv2_get_plots
 
 exponential_lv2_get_results: 
@@ -233,6 +253,22 @@ trimodal_small_std_lv3_get_results:
 
 trimodal_small_std_lv3_get_plots: 
 	python allocation_strategies/lv3/plot_resources.py trimodal_small_std
+
+bimodal_same_lv2: bimodal_same_lv2_get_results bimodal_same_lv2_get_plots
+
+bimodal_same_lv2_get_results: 
+	python allocation_strategies/lv2/eval_alloc_strats.py bimodal_same
+
+bimodal_same_lv2_get_plots: 
+	python allocation_strategies/lv2/plot_resources.py bimodal_same
+
+bimodal_same_lv3: bimodal_same_lv3_get_results bimodal_same_lv3_get_plots
+
+bimodal_same_lv3_get_results: 
+	python allocation_strategies/lv3/eval_alloc_strats.py bimodal_same
+
+bimodal_same_lv3_get_plots: 
+	python allocation_strategies/lv3/plot_resources.py bimodal_same
 
 bioblast_lv2: bioblast_lv2_get_results bioblast_lv2_get_plots
 

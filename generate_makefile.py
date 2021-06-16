@@ -1,4 +1,4 @@
-datasets = ["colmena", "hypersweep", "normal_large", "normal_small", "uniform_large", "uniform_small", "exponential", "beta", "bimodal", "trimodal", "bimodal_small_std", "trimodal_small_std", "bioblast", "lobsterCMSsimulation", "lobsterCMSanalysis"]
+datasets = ["colmena", "hypersweep", "normal_large", "normal_small", "uniform_large", "uniform_small", "uniform_same",  "exponential", "beta", "bimodal", "trimodal", "bimodal_small_std", "trimodal_small_std", "bimodal_same", "bioblast", "lobsterCMSsimulation", "lobsterCMSanalysis"]
 
 real_datasets = ["colmena", "hypersweep"]
 levels = ['lv2', 'lv3']

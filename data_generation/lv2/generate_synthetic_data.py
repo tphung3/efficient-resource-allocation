@@ -2,6 +2,7 @@ import numpy as np
 import os
 import math
 import sys
+import matplotlib.pyplot as plt
 
 #fix seed for consistent datasets
 seed=20210602
@@ -47,6 +48,11 @@ def exponential(scale, size):
 	mem_tag = [[i, 1] for i in mem]
 	return mem_tag
 
+def beta(a, b, maximum, size):
+	mem = maximum*np.random.beta(a, b, size)
+	mem_tag = [[i, 1] for i in mem]
+	return mem_tag
+
 def bimodal(mean1, mean2, std1, std2, num_tasks):
 	mem1 = np.random.normal(mean1, std1, num_tasks//2)
 	mem2 = np.random.normal(mean2, std2, num_tasks//2)
@@ -72,6 +78,7 @@ generate_data_dir("normal_small", normal(8000, 2000, num_tasks))
 generate_data_dir("uniform_large", uniform(10000, 40000, num_tasks))
 generate_data_dir("uniform_small", uniform(1000, 4000, num_tasks))
 generate_data_dir("exponential", exponential(20000, (num_tasks)))
+generate_data_dir("beta", beta(8, 2, 40000, num_tasks))
 generate_data_dir("bimodal", bimodal(32000, 11000, 8000, 2000, num_tasks))
 generate_data_dir("trimodal", trimodal(32000, 11000, 4000, 1000, 16000, 4000, num_tasks))
 generate_data_dir("bimodal_small_std", bimodal(32000, 8000, 500, 200, num_tasks))

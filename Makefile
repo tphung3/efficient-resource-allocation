@@ -1,4 +1,4 @@
-all: colmena hypersweep normal_large normal_small uniform_large uniform_small exponential bimodal trimodal bimodal_small_std trimodal_small_std bioblast lobsterCMSsimulation lobsterCMSanalysis 
+all: colmena hypersweep normal_large normal_small uniform_large uniform_small exponential beta bimodal trimodal bimodal_small_std trimodal_small_std bioblast lobsterCMSsimulation lobsterCMSanalysis 
 
 colmena: colmena_lv2 colmena_lv3 
 
@@ -13,6 +13,8 @@ uniform_large: uniform_large_lv2 uniform_large_lv3
 uniform_small: uniform_small_lv2 uniform_small_lv3 
 
 exponential: exponential_lv2 exponential_lv3 
+
+beta: beta_lv2 beta_lv3 
 
 bimodal: bimodal_lv2 bimodal_lv3 
 
@@ -152,6 +154,22 @@ exponential_lv3_get_results:
 exponential_lv3_get_plots: 
 	python allocation_strategies/lv3/plot_resources.py exponential
 
+beta_lv2: beta_lv2_get_results beta_lv2_get_plots
+
+beta_lv2_get_results: 
+	python allocation_strategies/lv2/eval_alloc_strats.py beta
+
+beta_lv2_get_plots: 
+	python allocation_strategies/lv2/plot_resources.py beta
+
+beta_lv3: beta_lv3_get_results beta_lv3_get_plots
+
+beta_lv3_get_results: 
+	python allocation_strategies/lv3/eval_alloc_strats.py beta
+
+beta_lv3_get_plots: 
+	python allocation_strategies/lv3/plot_resources.py beta
+
 bimodal_lv2: bimodal_lv2_get_results bimodal_lv2_get_plots
 
 bimodal_lv2_get_results: 
@@ -265,4 +283,6 @@ lobsterCMSanalysis_lv3_get_plots:
 	python allocation_strategies/lv3/plot_resources.py lobsterCMSanalysis
 
 clean: 
+	rm resource_analysis/lv2/*/plots/*; rm resource_analysis/lv2/*/results/*;\ 
+	rm resource_analysis/lv3/*/plots/*; rm resource_analysis/lv3/*/results/*;\ 
 	

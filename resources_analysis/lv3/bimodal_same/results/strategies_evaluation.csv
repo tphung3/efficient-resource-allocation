@@ -13,8 +13,9 @@ wfail_alloc_core_t,0
 avg_wfail_alloc_core_t,0
 int_frag_core_t,188000.0
 avg_int_frag_core_t,0
-cores_t_utilization,0.9550883898709985
-no_cold_cores_t_util,0.9688261081344374
+cores_t_efficiency,0.9550883898709985
+no_cold_cores_t_effi,0.9688261081344374
+avg_cores_t_efficiency,0.9898449224612307
 total_mem_t,15203044000.0
 avg_total_mem_t,0
 no_cold_total_mem_t,14563044000.0
@@ -25,8 +26,9 @@ no_cold_wmem_t,6616302000.0
 avg_wfail_alloc_mem_t,0
 int_frag_mem_t,7216967500.0
 avg_int_frag_mem_t,0
-mem_t_utilization,0.5252945725869109
-no_cold_mem_t_util,0.5456786369662826
+mem_t_efficiency,0.5252945725869109
+no_cold_mem_t_effi,0.5456786369662826
+avg_mem_t_efficiency,0.5789990561458928
 total_disk_t,5642000000.0
 avg_total_disk_t,0
 no_cold_total_disk_t,5002000000.0
@@ -37,8 +39,9 @@ wfail_alloc_disk_t,0
 avg_wfail_alloc_disk_t,0
 int_frag_disk_t,1644000000.0
 avg_int_frag_disk_t,0
-disk_t_utilization,0.7086139666784828
-no_cold_disk_t_util,0.795281887245102
+disk_t_efficiency,0.7086139666784828
+no_cold_disk_t_effi,0.795281887245102
+avg_disk_t_efficiency,0.987392370427638
 num_retries,16
 num_retries_bucket,0
 num_retries_machine,0

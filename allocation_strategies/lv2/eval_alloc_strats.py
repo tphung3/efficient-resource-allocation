@@ -7,21 +7,22 @@ import os
 import sys
 import numpy as np
 import copy
+from textwrap import wrap
 
 #dictionary to store statistics of each strategy
 stats = {"num_tasks": 0, 
 		 "total_cores_t": 0, "avg_total_cores_t": 0, "no_cold_total_cores_t": 0,
 		 "wcores_t": 0, "no_cold_wcores_t": 0, "avg_wcores_t": 0, "wfail_alloc_core_t": 0,
 		 "avg_wfail_alloc_core_t": 0, "int_frag_core_t": 0, "avg_int_frag_core_t": 0, 
-		 "cores_t_utilization": 0, "no_cold_cores_t_util": 0,
+		 "cores_t_efficiency": 0, "no_cold_cores_t_effi": 0, "avg_cores_t_efficiency": 0,
 		 "total_mem_t": 0, "avg_total_mem_t": 0, "no_cold_total_mem_t": 0,
 		 "wmem_t": 0, "no_cold_wmem_t": 0, "avg_wmem_t": 0, "wfail_alloc_mem_t": 0,
 		 "avg_wfail_alloc_mem_t": 0, "int_frag_mem_t": 0, "avg_int_frag_mem_t": 0, 
-		 "mem_t_utilization": 0, "no_cold_mem_t_util": 0,
+		 "mem_t_efficiency": 0, "no_cold_mem_t_effi": 0, "avg_mem_t_efficiency": 0,
 		 "total_disk_t": 0, "avg_total_disk_t": 0, "no_cold_total_disk_t": 0,
 		 "wdisk_t": 0, "no_cold_wdisk_t": 0, "avg_wdisk_t": 0, "wfail_alloc_disk_t": 0,
 		 "avg_wfail_alloc_disk_t": 0, "int_frag_disk_t": 0, "avg_int_frag_disk_t": 0, 
-		 "disk_t_utilization": 0, "no_cold_disk_t_util": 0,
+		 "disk_t_efficiency": 0, "no_cold_disk_t_effi": 0, "avg_disk_t_efficiency": 0,
 		 "num_retries": 0, "num_retries_bucket": 0, "num_retries_machine": 0,
 		 "total_run_time": 0, "avg_run_time": 0}
 
@@ -42,9 +43,6 @@ level = 'lv2'
 
 #input file of resources_consumption
 res_file = "resources_data/{}/{}/data/resources_all.txt".format(level, dataset)
-
-#number of buckets of the cold_bucketing strategy
-num_buckets = 2
 
 #output csv file
 csv_file = "resources_analysis/{}/{}/results/strategies_evaluation.csv".format(level, dataset)
@@ -86,26 +84,34 @@ def get_tasks_resources(file_name):
 			all_res.append([core, mem, disk, time, tag])
 	return all_res
 
-def plot_util_dists(strat_name, resource_name, all_tasks_resource_t_allocated, all_tasks_resource_t_used):
-	all_util = [all_tasks_resource_t_used[i]/all_tasks_resource_t_allocated[i] for i in range(len(all_tasks_resource_t_allocated))]
-	plt.plot([i for i in range(len(all_tasks_resource_t_allocated))], all_util)
+def update_aver_res_effi(resource_name, all_tasks_resource_t_allocated, all_tasks_resource_t_used):
+	all_effi = [all_tasks_resource_t_used[i]/all_tasks_resource_t_allocated[i] for i in range(len(all_tasks_resource_t_allocated))]
+	stats['avg_{}_t_efficiency'] = np.average(all_effi)	
+
+def plot_effi_dists(strat_name, resource_name, all_tasks_resource_t_allocated, all_tasks_resource_t_used):
+	all_effi = [all_tasks_resource_t_used[i]/all_tasks_resource_t_allocated[i] for i in range(len(all_tasks_resource_t_allocated))]
+	avg_effi = np.average(all_effi)
+	std_effi = np.std(all_effi)
+	max_effi = np.amax(all_effi)
+	min_effi = np.amin(all_effi)
+	plt.plot([i for i in range(len(all_tasks_resource_t_allocated))], all_effi)
 	plt.xlabel("Tasks' completion over time")
-	plt.ylabel("Utilization level")
-	plt.title("Chronological utilization - {} - {}".format(resource_name, strat_name))
+	plt.ylabel("Level of efficiency")
+	plt.title('\n'.join(wrap("Chronological efficiency - {} - {} - average effi.: {} - stan. dev.: {} - max effi.: {} - min effi. : {}".format(resource_name, strat_name, round(avg_effi, 3), round(std_effi, 3), round(max_effi, 3), round(min_effi, 3)), 50)))
 	plt.ylim(bottom=0, top=1)
-	plt.savefig(plot_dir+"util_dist_chrono_{}_{}".format(resource_name, strat_name))
+	plt.savefig(plot_dir+"effi_dist_chrono_{}_{}".format(resource_name, strat_name))
 	plt.close()
-	all_util.sort()
-	plt.plot([i for i in range(len(all_tasks_resource_t_allocated))], all_util)
-	plt.xlabel("Tasks' sorted by util level")
-	plt.ylabel("Utilization level")
-	plt.title("Utilization - {} - {}".format(resource_name, strat_name))
+	all_effi.sort()
+	plt.plot([i for i in range(len(all_tasks_resource_t_allocated))], all_effi)
+	plt.xlabel("Tasks' sorted by efficiency level")
+	plt.ylabel("Efficiency level")
+	plt.title('\n'.join(wrap("Efficiency - {} - {} - average effi.: {} - stan. dev.: {} - max effi.: {} - min effi. : {}".format(resource_name, strat_name, round(avg_effi, 3), round(std_effi, 3), round(max_effi, 3), round(min_effi, 3)), 50)))
 	plt.ylim(bottom=0, top=1)
-	plt.savefig(plot_dir+"util_dist_{}_{}".format(resource_name, strat_name))
+	plt.savefig(plot_dir+"effi_dist_{}_{}".format(resource_name, strat_name))
 	plt.close()
 
 #Whole machine strategy: each task is allocated a whole machine with capacity defined above
-def whole_machine(all_resources, machine, bool_plot_util):
+def whole_machine(all_resources, machine, bool_plot_effi):
 	reset_stats(stats)
 	mcore = machine[0]
 	mmem = machine[1]
@@ -148,13 +154,19 @@ def whole_machine(all_resources, machine, bool_plot_util):
 	stats["avg_int_frag_core_t"] = stats["int_frag_core_t"]/stats["num_tasks"]
 	stats["avg_int_frag_mem_t"] = stats["int_frag_mem_t"]/stats["num_tasks"]
 	stats["avg_int_frag_disk_t"] = stats["int_frag_disk_t"]/stats["num_tasks"]
-	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
-	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
-	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
-	if bool_plot_util == 1:
-		plot_util_dists("whole_machine", "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
-		plot_util_dists("whole_machine", "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
-		plot_util_dists("whole_machine", "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
+	stats["cores_t_efficiency"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
+	stats["mem_t_efficiency"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
+	stats["disk_t_efficiency"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
+	all_effi_cores = [all_tasks_cores_t_used[i]/all_tasks_cores_t_allocated[i] for i in range(len(all_tasks_cores_t_allocated))]
+	stats['avg_cores_t_efficiency'] = np.average(all_effi_cores)
+	all_effi_mem = [all_tasks_mem_t_used[i]/all_tasks_mem_t_allocated[i] for i in range(len(all_tasks_mem_t_allocated))]
+	stats['avg_mem_t_efficiency'] = np.average(all_effi_mem)
+	all_effi_disk = [all_tasks_disk_t_used[i]/all_tasks_disk_t_allocated[i] for i in range(len(all_tasks_disk_t_allocated))]
+	stats['avg_disk_t_efficiency'] = np.average(all_effi_disk)
+	if bool_plot_effi == 1:
+		plot_effi_dists("whole_machine", "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
+		plot_effi_dists("whole_machine", "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
+		plot_effi_dists("whole_machine", "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
 	
 	"""#print out results/statistics of this strategy
 	rept = "Report for whole machine strat:\n"
@@ -163,7 +175,7 @@ def whole_machine(all_resources, machine, bool_plot_util):
 	print(rept)"""
 
 #Boxing machine strategy: each task is allocated with boxes of machines in increasing order (e.g, [1/8, 1/4, 1/2, 1])
-def boxing_machine(all_resources, machine, list_portions, bool_plot_util):
+def boxing_machine(all_resources, machine, list_portions, bool_plot_effi):
 	reset_stats(stats)
 	mcore = machine[0]
 	mmem = machine[1]
@@ -244,17 +256,23 @@ def boxing_machine(all_resources, machine, list_portions, bool_plot_util):
 	stats["avg_wfail_alloc_core_t"] = stats["wfail_alloc_core_t"]/stats["num_tasks"]
 	stats["avg_wfail_alloc_mem_t"] = stats["wfail_alloc_mem_t"]/stats["num_tasks"]
 	stats["avg_wfail_alloc_disk_t"] = stats["wfail_alloc_disk_t"]/stats["num_tasks"]
-	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
-	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
-	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
-	if bool_plot_util == 1:
-		plot_util_dists("boxing_machine", "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
-		plot_util_dists("boxing_machine", "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
-		plot_util_dists("boxing_machine", "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
+	stats["cores_t_efficiency"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
+	stats["mem_t_efficiency"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
+	stats["disk_t_efficiency"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
+	all_effi_cores = [all_tasks_cores_t_used[i]/all_tasks_cores_t_allocated[i] for i in range(len(all_tasks_cores_t_allocated))]
+	stats['avg_cores_t_efficiency'] = np.average(all_effi_cores)
+	all_effi_mem = [all_tasks_mem_t_used[i]/all_tasks_mem_t_allocated[i] for i in range(len(all_tasks_mem_t_allocated))]
+	stats['avg_mem_t_efficiency'] = np.average(all_effi_mem)
+	all_effi_disk = [all_tasks_disk_t_used[i]/all_tasks_disk_t_allocated[i] for i in range(len(all_tasks_disk_t_allocated))]
+	stats['avg_disk_t_efficiency'] = np.average(all_effi_disk)
+	if bool_plot_effi == 1:
+		plot_effi_dists("boxing_machine", "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
+		plot_effi_dists("boxing_machine", "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
+		plot_effi_dists("boxing_machine", "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
 
 	
 #declare resources strategy: each task is allocated by a manually declared amount of resources. This amount is also defined above.
-def declare_resources(all_resources, default_resources, machine_resources, bool_plot_util):
+def declare_resources(all_resources, default_resources, machine_resources, bool_plot_effi):
 	reset_stats(stats)
 	dcore = default_resources[0]
 	dmem = default_resources[1]
@@ -313,13 +331,19 @@ def declare_resources(all_resources, default_resources, machine_resources, bool_
 	stats["avg_int_frag_core_t"] = stats["int_frag_core_t"]/stats["num_tasks"]
 	stats["avg_int_frag_mem_t"] = stats["int_frag_mem_t"]/stats["num_tasks"]
 	stats["avg_int_frag_disk_t"] = stats["int_frag_disk_t"]/stats["num_tasks"]
-	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
-	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
-	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]	
-	if bool_plot_util == 1:
-		plot_util_dists("declare_resources", "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
-		plot_util_dists("declare_resources", "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
-		plot_util_dists("declare_resources", "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
+	stats["cores_t_efficiency"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
+	stats["mem_t_efficiency"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
+	stats["disk_t_efficiency"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]	
+	all_effi_cores = [all_tasks_cores_t_used[i]/all_tasks_cores_t_allocated[i] for i in range(len(all_tasks_cores_t_allocated))]
+	stats['avg_cores_t_efficiency'] = np.average(all_effi_cores)
+	all_effi_mem = [all_tasks_mem_t_used[i]/all_tasks_mem_t_allocated[i] for i in range(len(all_tasks_mem_t_allocated))]
+	stats['avg_mem_t_efficiency'] = np.average(all_effi_mem)
+	all_effi_disk = [all_tasks_disk_t_used[i]/all_tasks_disk_t_allocated[i] for i in range(len(all_tasks_disk_t_allocated))]
+	stats['avg_disk_t_efficiency'] = np.average(all_effi_disk)
+	if bool_plot_effi == 1:
+		plot_effi_dists("declare_resources", "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
+		plot_effi_dists("declare_resources", "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
+		plot_effi_dists("declare_resources", "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
 
 #slow increase strategy: Not implemented after a deep and careful thought about the potential of this strategy
 def slow_increase(all_res, mach_capa):
@@ -482,7 +506,7 @@ def plot_for_movies(strat_name, chro_cores, chro_mem, chro_disk, all_tag, all_bu
 		plt.close()
 
 #cold bucketing strategy: This strategy assumes that we have a resources log of completed tasks and allocates the remaining tasks based on this log. It divides the completed tasks into a number of equal-sized buckets (this number must be predefined) from 1 to n (assuming n buckets), with elements in bucket i always smaller than elements in bucket i+1. Then each task is allocated by the maximum element in each bucket in the increasing order (only retried if allocation fails). As we need a log of completed tasks (no completed tasks in the beginning/cold start problem), this log is achieved by running a number of tasks using whole machines. Finally, two ways of choosing buckets are implemented. Either we increase only the exceeded resources (diagonal=0) or we increase all resources/move to next buckets of all resources (diagonal=1).
-def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot, bool_plot_util):
+def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot, bool_plot_effi):
 	
 	#resetting stats
 	reset_stats(stats)
@@ -823,23 +847,29 @@ def cold_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bo
 	stats["avg_int_frag_core_t"] = stats["int_frag_core_t"]/stats["num_tasks"]
 	stats["avg_int_frag_mem_t"] = stats["int_frag_mem_t"]/stats["num_tasks"]
 	stats["avg_int_frag_disk_t"] = stats["int_frag_disk_t"]/stats["num_tasks"]
-	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
-	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
-	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
-	stats["no_cold_cores_t_util"] = 1 - stats["no_cold_wcores_t"]/stats["no_cold_total_cores_t"]
-	stats["no_cold_mem_t_util"] = 1 - stats["no_cold_wmem_t"]/stats["no_cold_total_mem_t"]
-	stats["no_cold_disk_t_util"] = 1 - stats["no_cold_wdisk_t"]/stats["no_cold_total_disk_t"]
+	stats["cores_t_efficiency"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
+	stats["mem_t_efficiency"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
+	stats["disk_t_efficiency"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
+	stats["no_cold_cores_t_effi"] = 1 - stats["no_cold_wcores_t"]/stats["no_cold_total_cores_t"]
+	stats["no_cold_mem_t_effi"] = 1 - stats["no_cold_wmem_t"]/stats["no_cold_total_mem_t"]
+	stats["no_cold_disk_t_effi"] = 1 - stats["no_cold_wdisk_t"]/stats["no_cold_total_disk_t"]
+	all_effi_cores = [all_tasks_cores_t_used[i]/all_tasks_cores_t_allocated[i] for i in range(len(all_tasks_cores_t_allocated))]
+	stats['avg_cores_t_efficiency'] = np.average(all_effi_cores)
+	all_effi_mem = [all_tasks_mem_t_used[i]/all_tasks_mem_t_allocated[i] for i in range(len(all_tasks_mem_t_allocated))]
+	stats['avg_mem_t_efficiency'] = np.average(all_effi_mem)
+	all_effi_disk = [all_tasks_disk_t_used[i]/all_tasks_disk_t_allocated[i] for i in range(len(all_tasks_disk_t_allocated))]
+	stats['avg_disk_t_efficiency'] = np.average(all_effi_disk)	
 
 	#plot the dynamics of buckets
 	if bool_plot == 1:
 		plot_buckets_over_time("cold_bucketing", chro_cores, chro_mem, chro_disk, all_tag, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start)
-	if bool_plot_util == 1:
-		plot_util_dists("cold_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
-		plot_util_dists("cold_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
-		plot_util_dists("cold_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
+	if bool_plot_effi == 1:
+		plot_effi_dists("cold_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
+		plot_effi_dists("cold_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
+		plot_effi_dists("cold_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
 
 #k-means bucketing strategy: In this strategy, we will classify incoming tasks into buckets based on the means of elements of buckets, then we will recompute means of buckets for next iteration.
-def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot, bool_movie, bool_plot_util):
+def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal, bool_plot, bool_movie, bool_plot_effi):
 
 	#resetting stats
 	reset_stats(stats)
@@ -1294,20 +1324,26 @@ def k_means_bucketing(all_res, num_buckets, num_cold_start, mach_capa, diagonal,
 	stats["avg_int_frag_core_t"] = stats["int_frag_core_t"]/stats["num_tasks"]
 	stats["avg_int_frag_mem_t"] = stats["int_frag_mem_t"]/stats["num_tasks"]
 	stats["avg_int_frag_disk_t"] = stats["int_frag_disk_t"]/stats["num_tasks"]
-	stats["cores_t_utilization"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
-	stats["mem_t_utilization"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
-	stats["disk_t_utilization"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
-	stats["no_cold_cores_t_util"] = 1 - stats["no_cold_wcores_t"]/stats["no_cold_total_cores_t"]
-	stats["no_cold_mem_t_util"] = 1 - stats["no_cold_wmem_t"]/stats["no_cold_total_mem_t"]
-	stats["no_cold_disk_t_util"] = 1 - stats["no_cold_wdisk_t"]/stats["no_cold_total_disk_t"]
+	stats["cores_t_efficiency"] = 1 - stats["wcores_t"]/stats["total_cores_t"]
+	stats["mem_t_efficiency"] = 1 - stats["wmem_t"]/stats["total_mem_t"]
+	stats["disk_t_efficiency"] = 1 - stats["wdisk_t"]/stats["total_disk_t"]
+	stats["no_cold_cores_t_effi"] = 1 - stats["no_cold_wcores_t"]/stats["no_cold_total_cores_t"]
+	stats["no_cold_mem_t_effi"] = 1 - stats["no_cold_wmem_t"]/stats["no_cold_total_mem_t"]
+	stats["no_cold_disk_t_effi"] = 1 - stats["no_cold_wdisk_t"]/stats["no_cold_total_disk_t"]
+	all_effi_cores = [all_tasks_cores_t_used[i]/all_tasks_cores_t_allocated[i] for i in range(len(all_tasks_cores_t_allocated))]
+	stats['avg_cores_t_efficiency'] = np.average(all_effi_cores)
+	all_effi_mem = [all_tasks_mem_t_used[i]/all_tasks_mem_t_allocated[i] for i in range(len(all_tasks_mem_t_allocated))]
+	stats['avg_mem_t_efficiency'] = np.average(all_effi_mem)
+	all_effi_disk = [all_tasks_disk_t_used[i]/all_tasks_disk_t_allocated[i] for i in range(len(all_tasks_disk_t_allocated))]
+	stats['avg_disk_t_efficiency'] = np.average(all_effi_disk)
 	
 	#plot the dynamics of buckets
 	if bool_plot == 1:
 		plot_buckets_over_time("k_means_bucketing", chro_cores, chro_mem, chro_disk, all_tag, all_bucket_cores, all_bucket_mem, all_bucket_disk, num_buckets, plot_dir, num_cold_start)	
-	if bool_plot_util == 1:
-		plot_util_dists("k_means_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
-		plot_util_dists("k_means_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
-		plot_util_dists("k_means_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
+	if bool_plot_effi == 1:
+		plot_effi_dists("k_means_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "cores", all_tasks_cores_t_allocated, all_tasks_cores_t_used)
+		plot_effi_dists("k_means_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "mem", all_tasks_mem_t_allocated, all_tasks_mem_t_used)
+		plot_effi_dists("k_means_bucketing_{}_{}_{}".format(num_buckets, num_cold_start, diagonal), "disk", all_tasks_disk_t_allocated, all_tasks_disk_t_used)
 
 
 #wrapper to record results of strategies to create spreadsheet of statistics
@@ -1416,79 +1452,25 @@ ax2.set_ylabel("wmem_t - Waste in memory over time")
 ax2.set_ylim(ymin=0)
 plt.savefig(plot_dir + "20_cold_starts_change_num_buckets.png")"""
 
-#plot core utilization
+#plot core efficiency
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1])
 strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
-util_level = csv_arr[15][1:]
-ax.bar(strats, util_level)
+effi_level = csv_arr[15][1:]
+ax.bar(strats, effi_level)
 plt.xticks(rotation=90)
 plt.ylim(top=1)
-plt.title('Core utilization for all strats')
-plt.ylabel('Util level')
+plt.title('Core efficiency for all strats')
+plt.ylabel('Efficiency level')
 rects = ax.patches
-labels = [round(i, 2) for i in util_level]
+labels = [round(i, 2) for i in effi_level]
 for rect, label in zip(rects, labels):
 	height = rect.get_height()
 	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'util_all_strats_cores.png', bbox_inches='tight')
+plt.savefig(plot_dir + 'effi_all_strats_cores.png', bbox_inches='tight')
 plt.close()
 
-#plot memory utilization
-fig = plt.figure()
-ax = fig.add_axes([0,0,1,1])
-strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
-util_level = csv_arr[27][1:]
-ax.bar(strats, util_level)
-plt.xticks(rotation=90)
-plt.ylim(top=1)
-plt.title('Memory utilization for all strats')
-plt.ylabel('Util level')
-rects = ax.patches
-labels = [round(i, 2) for i in util_level]
-for rect, label in zip(rects, labels):
-	height = rect.get_height()
-	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'util_all_strats_memory.png', bbox_inches='tight')
-plt.close()
-
-#plot disk utilization
-fig = plt.figure()
-ax = fig.add_axes([0,0,1,1])
-strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
-util_level = csv_arr[39][1:]
-ax.bar(strats, util_level)
-plt.xticks(rotation=90)
-plt.ylim(top=1)
-plt.title('Disk utilization for all strats')
-plt.ylabel('Util level')
-rects = ax.patches
-labels = [round(i, 2) for i in util_level]
-for rect, label in zip(rects, labels):
-	height = rect.get_height()
-	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'util_all_strats_disk.png', bbox_inches='tight')
-plt.close()
-
-#plot cores utilization with no cold
-fig = plt.figure()
-ax = fig.add_axes([0,0,1,1])
-strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
-util_level = csv_arr[16][1:]
-ax.bar(strats, util_level)
-plt.xticks(rotation=90)
-plt.ylim(top=1)
-plt.title('Cores utilization for all strats - no cold')
-plt.ylabel('Util level')
-rects = ax.patches
-labels = [round(i, 2) for i in util_level]
-for rect, label in zip(rects, labels):
-	height = rect.get_height()
-	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'util_all_strats_cores_no_cold.png', bbox_inches='tight')
-plt.close()
-
-#plot memory utilization with no cold
+#plot memory efficiency
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1])
 strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
@@ -1496,30 +1478,106 @@ util_level = csv_arr[28][1:]
 ax.bar(strats, util_level)
 plt.xticks(rotation=90)
 plt.ylim(top=1)
-plt.title('Memory utilization for all strats - no cold')
-plt.ylabel('Util level')
+plt.title('Memory efficiency for all strats')
+plt.ylabel('Effi level')
 rects = ax.patches
-labels = [round(i, 2) for i in util_level]
+labels = [round(i, 2) for i in effi_level]
 for rect, label in zip(rects, labels):
 	height = rect.get_height()
 	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'util_all_strats_memory_no_cold.png', bbox_inches='tight')
+plt.savefig(plot_dir + 'effi_all_strats_memory.png', bbox_inches='tight')
 plt.close()
 
-#plot disk utilization with no cold
+#plot disk efficiency
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1])
 strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
-util_level = csv_arr[40][1:]
-ax.bar(strats, util_level)
+effi_level = csv_arr[41][1:]
+ax.bar(strats, effi_level)
 plt.xticks(rotation=90)
 plt.ylim(top=1)
-plt.title('Disk utilization for all strats - no cold')
-plt.ylabel('Util level')
+plt.title('Disk efficiency for all strats')
+plt.ylabel('Effi level')
 rects = ax.patches
-labels = [round(i, 2) for i in util_level]
+labels = [round(i, 2) for i in effi_level]
 for rect, label in zip(rects, labels):
 	height = rect.get_height()
 	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
-plt.savefig(plot_dir + 'util_all_strats_disk_no_cold.png', bbox_inches='tight')
+plt.savefig(plot_dir + 'effi_all_strats_disk.png', bbox_inches='tight')
 plt.close()
+
+#plot cores efficiency with no cold
+fig = plt.figure()
+ax = fig.add_axes([0,0,1,1])
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+effi_level = csv_arr[16][1:]
+ax.bar(strats, effi_level)
+plt.xticks(rotation=90)
+plt.ylim(top=1)
+plt.title('Cores efficiency for all strats - no cold')
+plt.ylabel('Effi level')
+rects = ax.patches
+labels = [round(i, 2) for i in effi_level]
+for rect, label in zip(rects, labels):
+	height = rect.get_height()
+	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
+plt.savefig(plot_dir + 'effi_all_strats_cores_no_cold.png', bbox_inches='tight')
+plt.close()
+
+#plot memory efficiency with no cold
+fig = plt.figure()
+ax = fig.add_axes([0,0,1,1])
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+effi_level = csv_arr[29][1:]
+ax.bar(strats, effi_level)
+plt.xticks(rotation=90)
+plt.ylim(top=1)
+plt.title('Memory efficiency for all strats - no cold')
+plt.ylabel('Effi level')
+rects = ax.patches
+labels = [round(i, 2) for i in effi_level]
+for rect, label in zip(rects, labels):
+	height = rect.get_height()
+	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
+plt.savefig(plot_dir + 'effi_all_strats_memory_no_cold.png', bbox_inches='tight')
+plt.close()
+
+#plot disk efficiency with no cold
+fig = plt.figure()
+ax = fig.add_axes([0,0,1,1])
+strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+effi_level = csv_arr[42][1:]
+ax.bar(strats, effi_level)
+plt.xticks(rotation=90)
+plt.ylim(top=1)
+plt.title('Disk efficiency for all strats - no cold')
+plt.ylabel('Effi level')
+rects = ax.patches
+labels = [round(i, 2) for i in effi_level]
+for rect, label in zip(rects, labels):
+	height = rect.get_height()
+	ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
+plt.savefig(plot_dir + 'effi_all_strats_disk_no_cold.png', bbox_inches='tight')
+plt.close()
+
+def plot_aver_effi(row_num, resource_name):
+	fig = plt.figure()
+	ax = fig.add_axes([0,0,1,1])
+	strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
+	effi_level = csv_arr[row_num][1:]
+	ax.bar(strats, effi_level)
+	plt.xticks(rotation=90)
+	plt.ylim(top=1)
+	plt.title('Average {} efficiency for all strats'.format(resource_name))
+	plt.ylabel('Effi level')
+	rects = ax.patches
+	labels = [round(i, 2) for i in effi_level]
+	for rect, label in zip(rects, labels):
+		height = rect.get_height()
+		ax.text(rect.get_x()+0.3, height+0.01, label, ha='center', va='bottom')
+	plt.savefig(plot_dir + 'average_effi_all_strats_{}.png'.format(resource_name), bbox_inches='tight')
+	plt.close()
+
+plot_aver_effi(17, "cores")
+plot_aver_effi(30, "mem")
+plot_aver_effi(43, "disk")

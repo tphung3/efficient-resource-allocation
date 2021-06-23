@@ -1474,8 +1474,8 @@ plt.close()
 fig = plt.figure()
 ax = fig.add_axes([0,0,1,1])
 strats=['whole', 'boxing8-4-2-1', 'boxing4-2-1', 'boxing4-2-4/3-1', 'declare', 'k-means1-10-1', 'k-means2-10-0', 'k-means2-10-1','k-means3-10-1','k-means4-10-1','cold1-10-1','cold2-10-0','cold2-10-1','cold3-10-1','cold4-10-1']
-util_level = csv_arr[28][1:]
-ax.bar(strats, util_level)
+effi_level = csv_arr[28][1:]
+ax.bar(strats, effi_level)
 plt.xticks(rotation=90)
 plt.ylim(top=1)
 plt.title('Memory efficiency for all strats')

@@ -29,7 +29,7 @@ stats = {"num_tasks": 0,
 csv_arr = []
 
 #each machine is assumed to have 16 cores, 128GB of RAM and disk. This is not always true but used still for the purpose of evaluation
-mach_capa = [16, 128000, 128000]
+mach_capa = [16, 64000, 64000]
 
 #This is used in the declared_resources strategy, and this is a pretty good guess (for colmena dataset only) that has no fails due to under-allocation.
 def_res = [4, 40000, 10]

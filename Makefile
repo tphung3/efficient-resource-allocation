@@ -1,4 +1,4 @@
-all: colmena hypersweep normal_large normal_small uniform_large uniform_small uniform_same exponential beta bimodal trimodal bimodal_small_std trimodal_small_std bimodal_same bioblast lobsterCMSsimulation lobsterCMSanalysis 
+all: colmena hypersweep normal_large normal_small uniform_large uniform_small uniform_same exponential beta bimodal trimodal bimodal_small_std trimodal_small_std bimodal_same bioblast lobsterCMSsimulation lobsterCMSanalysis coffea exponential_small 
 
 colmena: colmena_lv2 colmena_lv3 
 
@@ -33,6 +33,10 @@ bioblast: bioblast_lv2 bioblast_lv3
 lobsterCMSsimulation: lobsterCMSsimulation_lv2 lobsterCMSsimulation_lv3 
 
 lobsterCMSanalysis: lobsterCMSanalysis_lv2 lobsterCMSanalysis_lv3 
+
+coffea: coffea_lv2 coffea_lv3 
+
+exponential_small: exponential_small_lv2 exponential_small_lv3 
 
 colmena_lv2: colmena_lv2_get_resources colmena_lv2_get_results colmena_lv2_get_plots
 
@@ -317,6 +321,38 @@ lobsterCMSanalysis_lv3_get_results:
 
 lobsterCMSanalysis_lv3_get_plots: 
 	python allocation_strategies/lv3/plot_resources.py lobsterCMSanalysis
+
+coffea_lv2: coffea_lv2_get_results coffea_lv2_get_plots
+
+coffea_lv2_get_results: 
+	python allocation_strategies/lv2/eval_alloc_strats.py coffea
+
+coffea_lv2_get_plots: 
+	python allocation_strategies/lv2/plot_resources.py coffea
+
+coffea_lv3: coffea_lv3_get_results coffea_lv3_get_plots
+
+coffea_lv3_get_results: 
+	python allocation_strategies/lv3/eval_alloc_strats.py coffea
+
+coffea_lv3_get_plots: 
+	python allocation_strategies/lv3/plot_resources.py coffea
+
+exponential_small_lv2: exponential_small_lv2_get_results exponential_small_lv2_get_plots
+
+exponential_small_lv2_get_results: 
+	python allocation_strategies/lv2/eval_alloc_strats.py exponential_small
+
+exponential_small_lv2_get_plots: 
+	python allocation_strategies/lv2/plot_resources.py exponential_small
+
+exponential_small_lv3: exponential_small_lv3_get_results exponential_small_lv3_get_plots
+
+exponential_small_lv3_get_results: 
+	python allocation_strategies/lv3/eval_alloc_strats.py exponential_small
+
+exponential_small_lv3_get_plots: 
+	python allocation_strategies/lv3/plot_resources.py exponential_small
 
 clean: 
 	rm resource_analysis/lv2/*/plots/*; rm resource_analysis/lv2/*/results/*;\ 

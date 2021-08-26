@@ -45,6 +45,9 @@ def uniform(low, high, num_tasks):
 
 def exponential(scale, size):
 	mem = np.random.exponential(scale, size)
+	for i in range(len(mem)):
+		if mem[i] > 64000:
+			mem[i] = 64000
 	mem_tag = [[i, 1] for i in mem]
 	return mem_tag
 
@@ -101,3 +104,4 @@ generate_data_dir("bimodal_small_std", bimodal(32000, 8000, 500, 200, num_tasks)
 generate_data_dir("trimodal_small_std", trimodal(32000, 11000, 500, 500, 16000, 500, num_tasks))
 generate_data_dir("bimodal_same", bimodal(8000, 8000, 2000, 2000, num_tasks))
 generate_data_dir("uniform_same", uniform_same(8000, 9000, 4, num_tasks))
+generate_data_dir("exponential_small", exponential(10000, (num_tasks)))

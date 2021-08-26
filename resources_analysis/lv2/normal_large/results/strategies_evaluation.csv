@@ -1,4 +1,4 @@
-,whole_machine,boxing_machine,boxing_machine,boxing_machine,declare_resources,k_means_bucketing,k_means_bucketing,k_means_bucketing,k_means_bucketing,k_means_bucketing,cold_bucketing,cold_bucketing,cold_bucketing,cold_bucketing,cold_bucketing
+,whole_machine,boxing_machine,boxing_machine,boxing_machine,declare_resources,k_means_bucketing,k_means_bucketing,k_means_bucketing,k_means_bucketing,k_means_bucketing,quartile_bucketing,quartile_bucketing,quartile_bucketing,quartile_bucketing,quartile_bucketing
 #buckets,x,x,x,x,x,1,2,2,3,4,1,2,2,3,4
 # cold starts,x,x,x,x,x,10,10,10,10,10,10,10,10,10,10
 diagonal?,x,"[0.125, 0.25, 0.5, 1]","[0.25, 0.5, 1]","[0.25, 0.5, 0.75, 1]",x,1,0,1,1,1,1,0,1,1,1
